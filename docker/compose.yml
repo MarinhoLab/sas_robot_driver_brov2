@@ -1,0 +1,13 @@
+services:
+    sas:
+      build:
+        context: ..
+        dockerfile: docker/Dockerfile
+      environment:
+        - ROS_DOMAIN_ID=1
+        - ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET
+        - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+        - FASTDDS_BUILTIN_TRANSPORTS=UDPv4
+      network_mode: host
+      ipc: host
+      command: tail -f /dev/null
