@@ -108,6 +108,14 @@ unset(RCLCPP_LOCAL_BINARY_NAME)
 # CPP Binary Block [END] #
 ##########################
 
+
+##### PYTHON EXECUTABLES #####
+install(PROGRAMS
+        scripts/driver_wrench_example.py
+        DESTINATION lib/${PROJECT_NAME}
+)
+##END## PYTHON EXECUTABLES #####
+
 ########################
 # Launch Block [BEGIN] #
 # vvvvvvvvvvvvvvvvvvvv #
