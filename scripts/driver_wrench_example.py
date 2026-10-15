@@ -104,7 +104,7 @@ def main(args=None):
         rclcpp_init()
         ros_initialized = True
 
-        node = rclcpp_Node("sas_robot_driver_brov2_joint_space_example_node_cpp")
+        node = rclcpp_Node("sas_robot_driver_brov2_driver_wrench_example_node_cpp")
 
         # 10 ms clock
         clock = Clock(dt)
