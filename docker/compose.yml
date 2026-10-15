@@ -4,10 +4,12 @@ services:
         context: ..
         dockerfile: docker/Dockerfile
       environment:
-        - ROS_DOMAIN_ID=1
+        - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
         - ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET
         - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
         - FASTDDS_BUILTIN_TRANSPORTS=UDPv4
       network_mode: host
       ipc: host
+      volumes:
+        - ..:/root/ros2_ws/src/sas_robot_driver_brov2
       command: tail -f /dev/null
