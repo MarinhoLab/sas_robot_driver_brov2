@@ -5,7 +5,7 @@
 #
 #    sas_robot_driver_brov2 is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Lesser General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
+#    the Free Software Foundation, either version 2.1 of the License, or
 #    (at your option) any later version.
 #
 #    sas_robot_driver_brov2 is distributed in the hope that it will be useful,
@@ -24,11 +24,20 @@
 # ################################################################*/
 
 #pragma once
-#include <vector>
+
+/**
+ * @file driver_thruster_mapping.hpp
+ * @brief Mapping functions from thruster force to PWM commands for the BlueROV2.
+ */
 
 namespace sas
 {
-	double bivariate_poly(double F, double V, const std::vector<double>& c);
-
+	/**
+	 * @brief Convert a thruster force into a PWM command.
+	 * @param F The desired thruster force.
+	 * @param min_pwm The minimum allowed PWM value.
+	 * @param max_pwm The maximum allowed PWM value.
+	 * @return The PWM command, saturated to [min_pwm, max_pwm].
+	 */
 	double force_to_pwm(double F, double min_pwm, double max_pwm);
 }

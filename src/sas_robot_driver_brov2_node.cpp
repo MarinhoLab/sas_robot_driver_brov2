@@ -5,7 +5,7 @@
 #
 #    sas_robot_driver_brov2 is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Lesser General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
+#    the Free Software Foundation, either version 2.1 of the License, or
 #    (at your option) any later version.
 #
 #    sas_robot_driver_brov2 is distributed in the hope that it will be useful,
@@ -22,6 +22,13 @@
 #   Co-author: Murilo M. Marinho, email: murilomarinho@ieee.org
 #
 # ################################################################*/
+
+/**
+ * @file sas_robot_driver_brov2_node.cpp
+ * @brief ROS 2 node that reads parameters, instantiates sas::RobotDriverBrov2 and runs it
+ *        through sas::RobotDriverROS.
+ */
+
 #include <rclcpp/rclcpp.hpp>
 #include <sas_common/sas_common.hpp>
 #include <sas_core/eigen3_std_conversions.hpp>
