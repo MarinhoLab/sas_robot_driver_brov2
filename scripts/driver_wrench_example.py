@@ -6,7 +6,7 @@
 #
 #    sas_robot_driver_brov2 is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Lesser General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
+#    the Free Software Foundation, either version 2.1 of the License, or
 #    (at your option) any later version.
 #
 #    sas_robot_driver_brov2 is distributed in the hope that it will be useful,
@@ -82,7 +82,7 @@ def run_motion(rdi, node, clock, name, tau, duration):
 
     steps = int(duration / dt)
 
-    for i in range(steps):
+    for _ in range(steps):
         clock.update_and_sleep()
 
         rdi.send_target_joint_forces(S_driver @ target_joint_forces)
@@ -126,8 +126,8 @@ def main(args=None):
         print(f"tau = {tau}")
 
         # Execute motion tests
-        #run_test_group(rdi, node, clock, "Basic translations", basic_translations)
-        run_test_group(rdi, node, clock, "Basic rotations", basic_rotations)
+        run_test_group(rdi, node, clock, "Basic translations", basic_translations)
+        #run_test_group(rdi, node, clock, "Basic rotations", basic_rotations)
         #run_test_group(rdi, node, clock, "Combined motions", combined_motions)
 
         # Statistics
