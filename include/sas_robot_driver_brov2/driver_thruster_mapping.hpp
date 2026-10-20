@@ -30,19 +30,8 @@
  * @brief Mapping functions from thruster force to PWM commands for the BlueROV2.
  */
 
-#include <vector>
-
 namespace sas
 {
-	/**
-	 * @brief Evaluate a bivariate polynomial in force and bus voltage.
-	 * @param F The thruster force.
-	 * @param V The bus (battery) voltage.
-	 * @param c The polynomial coefficients.
-	 * @return The polynomial evaluated at (F, V).
-	 */
-	double bivariate_poly(double F, double V, const std::vector<double>& c);
-
 	/**
 	 * @brief Convert a thruster force into a PWM command.
 	 * @param F The desired thruster force.

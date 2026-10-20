@@ -88,16 +88,15 @@ n.w.release()
 print('frames', n.n)
 ```
 
-Start the recorder, then run the wrench test (it takes about two minutes). The script defaults to the
-`brov2_heavy_1` driver prefix, so for `brov2_launch.py` run a copy that uses `brov2_1`:
+Start the recorder, then run the wrench test (it takes about two minutes).
+The script connects to `brov2_1` by default, so it can be run directly (pass `brov2_heavy_1` for the heavy launch):
 
 ```bash
 docker exec -d blue-sim bash -lc 'source /opt/ros/jazzy/setup.bash; python3 /tmp/record.py /tmp/wrench.mp4 125 > /tmp/rec.log 2>&1'
 
 cd docker
 docker compose exec -T sas bash -lc 'source /opt/ros/jazzy/setup.bash; source /root/ros2_ws/install/setup.bash; \
-  sed "s/brov2_heavy_1/brov2_1/" /root/ros2_ws/src/sas_robot_driver_brov2/scripts/driver_wrench_example.py > /tmp/ex.py; \
-  python3 /tmp/ex.py'
+  ros2 run sas_robot_driver_brov2 driver_wrench_example.py'
 ```
 
 The `.mp4` is only finalized when the recorder exits, so wait for `/tmp/rec.log` to print `frames <N>`

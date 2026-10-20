@@ -62,6 +62,13 @@ Run the wrench testing script:
 ros2 run sas_robot_driver_brov2 driver_wrench_example.py
 ```
 
+The script connects to the driver node `brov2_1` (started by `brov2_launch.py`) by default.
+For the heavy vehicle, pass the node name of `brov2_heavy_launch.py`:
+
+```bash
+ros2 run sas_robot_driver_brov2 driver_wrench_example.py brov2_heavy_1
+```
+
 ## ROS 2 Nodes & Parameters
 
 ### Node: `sas_robot_driver_brov2_node`
