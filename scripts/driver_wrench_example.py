@@ -25,6 +25,7 @@
 # #######################################################################################
 """
 
+import sys
 import time
 
 import numpy
@@ -110,8 +111,10 @@ def main(args=None):
         clock = Clock(dt)
         clock.init()
 
-        # Initialize the RobotDriverClient
-        rdi = RobotDriverClient(node, 'brov2_heavy_1')
+        # Initialize the RobotDriverClient. The prefix is the driver node name, which is
+        # brov2_1 (brov2_launch.py) or brov2_heavy_1 (brov2_heavy_launch.py).
+        prefix = sys.argv[1] if len(sys.argv) > 1 else 'brov2_1'
+        rdi = RobotDriverClient(node, prefix)
 
         # Wait for RobotDriverClient to be enabled
         while not rdi.is_enabled():
