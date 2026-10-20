@@ -5,7 +5,7 @@
   <version>0.0.0</version>
   <description>TODO: Package description</description>
   <maintainer email="murilo.marinho@manchester.ac.uk">murilo</maintainer>
-  <license>TODO: License declaration</license>
+  <license>LGPL-2.1-or-later</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

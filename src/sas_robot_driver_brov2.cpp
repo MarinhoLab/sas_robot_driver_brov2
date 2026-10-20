@@ -5,7 +5,7 @@
 #
 #    sas_robot_driver_brov2 is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Lesser General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
+#    the Free Software Foundation, either version 2.1 of the License, or
 #    (at your option) any later version.
 #
 #    sas_robot_driver_brov2 is distributed in the hope that it will be useful,
@@ -98,13 +98,10 @@ void RobotDriverBrov2::set_target_joint_positions(const Eigen::VectorXd&)
 
 /**
  * @brief RobotDriverBrov2::get_joint_torques
- * This method should always throw an exception if the user
- * tries to obtain the joint positions in an invalid state.
+ * Returns the last commanded wrench. This method throws an exception
+ * if called in an invalid state (not connected, not initialized, or not yet commanded).
  *
- * One useful way of defining that is with a VectorXd(), which
- * has by default size zero until it is initialized.
- *
- * @return a VectorXd representing the configuration space in radians.
+ * @return a VectorXd with the last commanded 6D wrench.
  */
 VectorXd RobotDriverBrov2::get_joint_torques()
 {
@@ -123,10 +120,10 @@ VectorXd RobotDriverBrov2::get_joint_torques()
 
 /**
  * @brief RobotDriverBrov2::set_target_joint_torques
- * This method expects the desired joint positions in radians. The most basic
- * check is for the correct
+ * Allocates the desired 6D wrench to the thrusters, converts the thruster
+ * forces to PWM, and publishes them as an RC override.
  *
- * @param tau
+ * @param tau The desired 6D wrench.
  */
 void RobotDriverBrov2::set_target_joint_torques(const VectorXd &tau) {  //  receives  PWM commands as a vector of doubles.
 
