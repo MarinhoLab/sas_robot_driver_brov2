@@ -23,6 +23,8 @@ curves, and publishes `mavros_msgs/OverrideRCIn` on the RC override topic
 - `launch/` - `brov2_launch.py` and `brov2_heavy_launch.py` (all parameters: TAM, PWM limits, thrust curves, MAVROS topics)
 - `scripts/driver_wrench_example.py` - example that sends wrenches through the SAS client
 - `docker/` - Dockerfile and compose file (host networking, same `ROS_DOMAIN_ID` as Blue)
+- `.agents/` - helper scripts for agents: `launch_blue.sh`, `record.py`, `make_gif.sh` (see "Re-creating the simulation video")
+- `media/` - README assets (`brov2_wrench_sim.gif`)
 
 ## Dependencies
 
@@ -64,14 +66,10 @@ docker run -d --name blue-sim --platform linux/amd64 --network host --ipc host \
 docker exec blue-sim bash -lc 'sed -i "s|-v 4 -r|-s --headless-rendering -v 3 -r|" \
   /home/ubuntu/ws_blue/install/ardusub_bringup/share/ardusub_bringup/launch/sitl.launch.yaml'
 
-# The PATH/plugin variables are only set in ~/.bashrc, so export them for non-interactive shells
-docker exec -d blue-sim bash -lc '
-  export HOME=/home/ubuntu
-  export PATH=$HOME/ardupilot/build/sitl/bin:$PATH
-  export GZ_SIM_SYSTEM_PLUGIN_PATH=$HOME/ardupilot_gazebo/build
-  export GZ_SIM_RESOURCE_PATH=$HOME/ardupilot_gazebo/models:$HOME/ardupilot_gazebo/worlds
-  source /opt/ros/jazzy/setup.bash; source /home/ubuntu/ws_blue/install/setup.bash
-  env -u LIBGL_ALWAYS_SOFTWARE GZ_IP=127.0.0.1 ros2 launch blue_bringup bluerov2.launch.yaml use_sim:=true > /tmp/blue.log 2>&1'
+# The PATH/plugin variables are only set in ~/.bashrc, so .agents/launch_blue.sh exports them
+# (pass bluerov2_heavy as its argument for the heavy vehicle)
+docker cp .agents/launch_blue.sh blue-sim:/tmp/launch_blue.sh
+docker exec -d blue-sim bash -lc 'bash /tmp/launch_blue.sh'
 ```
 
 Wait about 2 minutes, then check that `ros2 topic echo /mavros/state --once` (inside `blue-sim`) shows `connected: true`.
@@ -98,10 +96,11 @@ docker exec blue-sim bash -lc 'source /opt/ros/jazzy/setup.bash; \
 `.agents/record.py` subscribes to `/camera/image_raw` and writes an mp4 using OpenCV (already in the Blue image).
 Usage: `python3 record.py <out.mp4> <seconds>`.
 
-Start the recorder, then run the wrench test (it takes about two minutes).
+Copy the recorder into the container, start it, then run the wrench test (it takes about two minutes).
 The script connects to `brov2_1` by default, so it can be run directly (pass `brov2_heavy_1` for the heavy launch):
 
 ```bash
+docker cp .agents/record.py blue-sim:/tmp/record.py
 docker exec -d blue-sim bash -lc 'source /opt/ros/jazzy/setup.bash; python3 /tmp/record.py /tmp/wrench.mp4 125 > /tmp/rec.log 2>&1'
 
 cd docker
@@ -114,11 +113,12 @@ before copying it out with `docker cp blue-sim:/tmp/wrench.mp4 .`.
 
 ### 4. Encode
 
-The sim runs slower than real time, so the frames are retimed to the achieved frame rate (`N` frames over the
-recording duration, e.g. 655 frames over 125 s is 5.24 fps), then re-encoded as H.264 with the host `ffmpeg`:
+The sim runs slower than real time, so `.agents/make_gif.sh` retimes the frames to the achieved frame rate
+(`N` frames over the recording duration, e.g. 682 frames over 125 s is 5.46 fps), then bakes the README GIF
+(`media/brov2_wrench_sim.gif`, 3x speed to keep it small) with the host `ffmpeg`:
 
 ```bash
-ffmpeg -y -i wrench.mp4 -vf "setpts=PTS*10/<fps>" -r 10 -c:v libx264 -pix_fmt yuv420p -crf 26 brov2_wrench_sim.mp4
+.agents/make_gif.sh wrench.mp4 <N> 125
 ```
 
 Check a few frames (for example with `ffmpeg -ss 5 -i brov2_wrench_sim.mp4 -frames:v 1 f.png`) to make sure the
