@@ -23,6 +23,8 @@ curves, and publishes `mavros_msgs/OverrideRCIn` on the RC override topic
 - `launch/` - `brov2_launch.py` and `brov2_heavy_launch.py` (all parameters: TAM, PWM limits, thrust curves, MAVROS topics)
 - `scripts/driver_wrench_example.py` - example that sends wrenches through the SAS client
 - `docker/` - Dockerfile and compose file (host networking, same `ROS_DOMAIN_ID` as Blue)
+- `.agents/` - helper scripts for agents: `launch_blue.sh`, `record.py`, `make_gif.sh` (see "Re-creating the simulation video")
+- `media/` - README assets (`brov2_wrench_sim.gif`)
 
 ## Dependencies
 
@@ -95,43 +97,8 @@ docker exec blue-sim bash -lc 'source /opt/ros/jazzy/setup.bash; \
 
 ### 3. Record the camera
 
-Save the following as `record.py` and copy it into `blue-sim` with `docker cp`. It subscribes to `/camera/image_raw`
-and writes an mp4 using OpenCV (already in the Blue image). Usage: `python3 record.py <out.mp4> <seconds>`.
-
-```python
-import sys, time
-import cv2
-import numpy as np
-import rclpy
-from rclpy.node import Node
-from sensor_msgs.msg import Image
-
-out, duration = sys.argv[1], float(sys.argv[2])
-
-
-class Rec(Node):
-    def __init__(self):
-        super().__init__('rec')
-        self.w = cv2.VideoWriter(out, cv2.VideoWriter_fourcc(*'mp4v'), 10, (960, 540))
-        self.n = 0
-        self.create_subscription(Image, '/camera/image_raw', self.cb, 10)
-
-    def cb(self, m):
-        a = np.frombuffer(m.data, np.uint8).reshape(m.height, m.width, -1)
-        if m.encoding.startswith('rgb'):
-            a = cv2.cvtColor(a, cv2.COLOR_RGB2BGR)
-        self.w.write(cv2.resize(a, (960, 540)))
-        self.n += 1
-
-
-rclpy.init()
-n = Rec()
-t0 = time.time()
-while time.time() - t0 < duration:
-    rclpy.spin_once(n, timeout_sec=0.1)
-n.w.release()
-print('frames', n.n)
-```
+`.agents/record.py` subscribes to `/camera/image_raw` and writes an mp4 using OpenCV (already in the Blue image).
+Usage: `python3 record.py <out.mp4> <seconds>`.
 
 Start the recorder, then run the wrench test (it takes about two minutes).
 The script connects to `brov2_1` by default, so it can be run directly (pass `brov2_heavy_1` for the heavy launch):
