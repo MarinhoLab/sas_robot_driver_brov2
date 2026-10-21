@@ -1,4 +1,49 @@
-# Agent notes
+# AGENTS.md
+
+Guidance for AI agents and contributors working in this repository.
+
+## What this is
+
+`sas_robot_driver_brov2` is a ROS 2 (jazzy) `ament_cmake` package from the
+[SmartArmStack](https://smartarmstack.github.io/) project. It implements the
+`sas_core` `RobotDriver` interface for the BlueROV2 and BlueROV2 Heavy. The
+vehicle is treated as a 6-DOF "robot": the driver consumes a target wrench
+(`set_target_joint_torques`, 6D), maps it through the thruster allocation
+matrix (TAM) to per-thruster forces, converts forces to PWM using the thrust
+curves, and publishes `mavros_msgs/OverrideRCIn` on the RC override topic
+(through `realtime_tools`). Joint-position commands are not supported.
+
+## Repository layout
+
+- `include/sas_robot_driver_brov2/`
+  - `sas_robot_driver_brov2.hpp` - `sas::RobotDriverBrov2` and its configuration structs
+  - `driver_thruster_mapping.hpp` - thruster force to PWM mapping
+- `src/` - `sas_robot_driver_brov2.cpp`, `driver_thruster_mapping.cpp`, and the
+  node entry point `sas_robot_driver_brov2_node.cpp` (declares the ROS parameters)
+- `launch/` - `brov2_launch.py` and `brov2_heavy_launch.py` (all parameters: TAM, PWM limits, thrust curves, MAVROS topics)
+- `scripts/driver_wrench_example.py` - example that sends wrenches through the SAS client
+- `docker/` - Dockerfile and compose file (host networking, same `ROS_DOMAIN_ID` as Blue)
+
+## Dependencies
+
+`rclcpp`, `sas_core`, `sas_common`, `sas_robot_driver`, `mavros_msgs`,
+`realtime_tools`, `eigen`. Keep `package.xml` and `CMakeLists.txt` in sync when
+changing them, since `build_ros2.sh` in
+[smart_arm_stack_ROS2](https://github.com/SmartArmStack/smart_arm_stack_ROS2)
+generates the `.deb` from `package.xml` through bloom.
+
+## Build, run, verify
+
+There is no automated test suite. Build inside a SAS jazzy workspace with
+`colcon build`, then run the simulation as described in the `README.md` (Blue
+simulator plus `ros2 launch sas_robot_driver_brov2 brov2_launch.py`).
+
+## Documentation
+
+There is no local `Doxyfile`. API documentation is built by
+[sas_devel](https://github.com/MarinhoLab/sas_devel), which includes this
+repository as a submodule. Keep Doxygen comments (`@file`, `@brief`) on public
+headers and use only Doxygen-compatible markdown in `README.md`.
 
 ## Re-creating the simulation video
 
