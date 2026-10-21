@@ -69,6 +69,10 @@ For the heavy vehicle, pass the node name of `brov2_heavy_launch.py`:
 ros2 run sas_robot_driver_brov2 driver_wrench_example.py brov2_heavy_1
 ```
 
+Onboard camera of the simulated BlueROV2 while `driver_wrench_example.py` runs (shown at 3x speed).
+
+![BlueROV2 simulation driven by the SAS driver](media/brov2_wrench_sim.gif)
+
 ## ROS 2 Nodes & Parameters
 
 ### Node: `sas_robot_driver_brov2_node`
