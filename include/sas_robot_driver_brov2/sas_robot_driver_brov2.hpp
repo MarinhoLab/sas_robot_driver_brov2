@@ -31,7 +31,6 @@
 #include <mavros_msgs/msg/override_rc_in.hpp>
 #include <realtime_tools/realtime_publisher.hpp>
 
-using namespace Eigen;
 
 /**
  * @file sas_robot_driver_brov2.hpp
@@ -110,27 +109,27 @@ public:
      * @return The last commanded PWM, one entry per thruster.
      * @throws std::runtime_error if not connected or not yet commanded.
      */
-    VectorXd get_joint_positions() override;
+    Eigen::VectorXd get_joint_positions() override;
 
     /**
      * @brief Not supported.
      * @throws std::runtime_error always. Use set_target_joint_torques().
      */
-    void set_target_joint_positions(const VectorXd& q) override;
+    void set_target_joint_positions(const Eigen::VectorXd& q) override;
 
     /**
      * @brief Get the last commanded wrench.
      * @return The last commanded 6D wrench.
      * @throws std::runtime_error if not connected, not initialized, or not yet commanded.
      */
-    VectorXd get_joint_torques() override;
+    Eigen::VectorXd get_joint_torques() override;
 
     /**
      * @brief Command a 6D wrench, which is allocated to the thrusters and sent as PWM.
      * @param tau The desired 6D wrench.
      * @throws std::runtime_error if not connected/initialized or if tau is not 6D.
      */
-    void set_target_joint_torques(const VectorXd& tau) override;
+    void set_target_joint_torques(const Eigen::VectorXd& tau) override;
 
     /// @brief Create the ROS node and the RC override publisher.
     void connect() override;

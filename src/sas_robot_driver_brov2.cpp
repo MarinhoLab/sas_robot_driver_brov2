@@ -78,7 +78,7 @@ RobotDriverBrov2::~RobotDriverBrov2()
 
 }
 
-VectorXd RobotDriverBrov2::get_joint_positions()
+Eigen::VectorXd RobotDriverBrov2::get_joint_positions()
 {
     // there is no true sensor feedback, it just returns the last commanded PWM vector (command echo)
     if (!impl_->connected)
@@ -101,9 +101,9 @@ void RobotDriverBrov2::set_target_joint_positions(const Eigen::VectorXd&)
  * Returns the last commanded wrench. This method throws an exception
  * if called in an invalid state (not connected, not initialized, or not yet commanded).
  *
- * @return a VectorXd with the last commanded 6D wrench.
+ * @return an Eigen::VectorXd with the last commanded 6D wrench.
  */
-VectorXd RobotDriverBrov2::get_joint_torques()
+Eigen::VectorXd RobotDriverBrov2::get_joint_torques()
 {
     // there is no true sensor feedback, it just returns the last commanded PWM vector (command echo)
     if (!impl_->connected)
@@ -125,7 +125,7 @@ VectorXd RobotDriverBrov2::get_joint_torques()
  *
  * @param tau The desired 6D wrench.
  */
-void RobotDriverBrov2::set_target_joint_torques(const VectorXd &tau) {  //  receives  PWM commands as a vector of doubles.
+void RobotDriverBrov2::set_target_joint_torques(const Eigen::VectorXd &tau) {  //  receives  PWM commands as a vector of doubles.
 
     if (!impl_->connected || !impl_->initialized)
         throw std::runtime_error("Not connected/initialized.");
