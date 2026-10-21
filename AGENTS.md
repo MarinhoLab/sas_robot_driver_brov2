@@ -23,8 +23,6 @@ curves, and publishes `mavros_msgs/OverrideRCIn` on the RC override topic
 - `launch/` - `brov2_launch.py` and `brov2_heavy_launch.py` (all parameters: TAM, PWM limits, thrust curves, MAVROS topics)
 - `scripts/driver_wrench_example.py` - example that sends wrenches through the SAS client
 - `docker/` - Dockerfile and compose file (host networking, same `ROS_DOMAIN_ID` as Blue)
-- `.agents/` - helper scripts for agents: `launch_blue.sh`, `record.py`, `make_gif.sh` (see "Re-creating the simulation video")
-- `media/` - README assets (`brov2_wrench_sim.gif`)
 
 ## Dependencies
 
@@ -133,4 +131,4 @@ scene is rendered and changes over time. The camera sits at the water surface, s
 docker rm -f blue-sim
 ```
 
-Do not commit the video to the repository.
+Only the final GIF is committed; do not commit the intermediate `.mp4` files.
