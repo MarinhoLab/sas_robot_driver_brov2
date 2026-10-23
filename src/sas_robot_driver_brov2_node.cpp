@@ -85,6 +85,7 @@ int main(int argc, char** argv)
 
     	sas::get_ros_parameter(node, "batt_voltage", batt_voltage);
 		sas::get_ros_parameter(node, "thruster_channels", thruster_channels);
+		sas::get_ros_parameter(node, "pwm_mapping", configuration.pwm_mapping);
 		sas::get_ros_parameter(node, "thruster_neutral_pwm", thruster_neutral_pwm);
 		sas::get_ros_parameter(node, "thruster_min_pwm", thruster_min_pwm);
 		sas::get_ros_parameter(node, "thruster_max_pwm", thruster_max_pwm);
@@ -120,6 +121,13 @@ int main(int argc, char** argv)
     	if (N!=n) {
     		throw std::runtime_error("TAM column count must equal number of thrusters.");
 		}
+
+        // Validate PWM mapping method
+        if (configuration.pwm_mapping != "linear" &&
+            configuration.pwm_mapping != "bivariate")
+        {
+            throw std::invalid_argument("Unsupported PWM mapping method.");
+        }
 
 		// Read curve coefficients
     	configuration.v_bus = batt_voltage;

@@ -31,9 +31,49 @@
 
 namespace sas
 {
-    double force_to_pwm(double F, double min_pwm = 1100.0, double max_pwm = 1900.0)
+    double linear_poly(double F)
     {
-        const double pwm = 1500.0 + 8.0 * F;
+       return 1500.0 + 8.0 * F;
+    }
+
+    double bivariate_poly(double F, double V, const std::vector<double>& c)
+    {
+        return c[0] + c[1]*F + c[2]*V + c[3]*F*F + c[4]*F*V;
+    }
+
+    double force_to_pwm_linear(double F, double min_pwm, double max_pwm)
+    {
+        double pwm = linear_poly(F);
+
+        return std::clamp(pwm, min_pwm, max_pwm);
+    }
+
+    double force_to_pwm_bivariate(double F, double V,
+                                 const std::vector<double>& fwd,
+                                 const std::vector<double>& rev,
+                                 int neutral_pwm, int deadband_pwm,
+                                 double min_pwm, double max_pwm)
+    {
+        const double force_deadband_fwd_N = 0.40;
+        const double force_deadband_rev_N = 0.31;
+        const double force_zero_eps = 1e-9;
+
+        if (std::abs(F) <= force_zero_eps)
+        {
+            return static_cast<double>(neutral_pwm);
+        }
+
+        if (F > 0.0 && F < force_deadband_fwd_N)
+            return static_cast<double>(neutral_pwm);
+
+        if (F < 0.0 && -F < force_deadband_rev_N)
+            return static_cast<double>(neutral_pwm);
+
+        double pwm = (F > 0.0) ? bivariate_poly(F, V, fwd)
+                             : bivariate_poly(F, V, rev);
+
+        if (std::abs(pwm - neutral_pwm) <= deadband_pwm)
+            pwm = neutral_pwm;
 
         return std::clamp(pwm, min_pwm, max_pwm);
     }
