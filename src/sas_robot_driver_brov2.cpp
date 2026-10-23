@@ -156,7 +156,34 @@ void RobotDriverBrov2::set_target_joint_torques(const Eigen::VectorXd &tau) {  /
             const auto & cfg = configuration_.thruster_configs[i];  // makes cfg refer to the configuration data for thruster i
 
 			const double Fi = std::clamp(f(i), cfg.f_min, cfg.f_max);
-            double pwm = force_to_pwm(Fi, cfg.min_pwm, cfg.max_pwm);
+
+            double pwm;
+
+            if (configuration_.pwm_mapping == "linear")
+            {
+                pwm = force_to_pwm_linear(
+                      Fi,
+                      cfg.min_pwm,
+                      cfg.max_pwm
+                  );
+            }
+            else if (configuration_.pwm_mapping == "bivariate")
+            {
+                pwm = force_to_pwm_bivariate(
+                    Fi,
+                    configuration_.v_bus,
+                    configuration_.fwd_thrust_curve_coeffs,
+                    configuration_.rev_thrust_curve_coeffs,
+                    cfg.neutral_pwm,
+                    cfg.deadband_pwm,
+                    cfg.min_pwm,
+                    cfg.max_pwm
+                );
+            }
+            else
+            {
+                throw std::invalid_argument("Unsupported PWM mapping");
+            }
 
             impl_->rt_override_rc_pub->msg_.channels[cfg.channel - 1] = static_cast<uint16_t>(std::lround(pwm)); // write value into correct RC channel slot
             impl_->last_pwm_(i) = pwm;   // stores the last commanded PWM per thruster for logging

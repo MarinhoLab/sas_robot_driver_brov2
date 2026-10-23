@@ -24,6 +24,7 @@
 # ################################################################*/
 
 #pragma once
+#include <vector>
 
 /**
  * @file driver_thruster_mapping.hpp
@@ -32,12 +33,20 @@
 
 namespace sas
 {
-	/**
-	 * @brief Convert a thruster force into a PWM command.
-	 * @param F The desired thruster force.
-	 * @param min_pwm The minimum allowed PWM value.
-	 * @param max_pwm The maximum allowed PWM value.
-	 * @return The PWM command, saturated to [min_pwm, max_pwm].
-	 */
-	double force_to_pwm(double F, double min_pwm, double max_pwm);
+    double linear_poly(double F);
+
+    double bivariate_poly(double F, double V, const std::vector<double>& c);
+
+    double force_to_pwm_linear(double F,
+                            double min_pwm,
+                            double max_pwm);
+
+    double force_to_pwm_bivariate(double F,
+                          double V,
+                          const std::vector<double>& fwd,
+                          const std::vector<double>& rev,
+                          int neutral_pwm,
+                          int deadband_pwm,
+                          double min_pwm,
+                          double max_pwm);
 }
