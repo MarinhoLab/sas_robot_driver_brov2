@@ -122,6 +122,7 @@ install(PROGRAMS
 # According to https://github.com/SmartArmStack/sas_robot_driver/blob/ros2/CMakeLists.txt
 install(DIRECTORY
         launch
+        config
         DESTINATION share/${PROJECT_NAME}/
 )
 # ^^^^^^^^^^^^^^^^^^ #
