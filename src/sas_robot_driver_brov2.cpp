@@ -28,7 +28,10 @@
 #include "sas_robot_driver_brov2/driver_thruster_mapping.hpp"
 #include <iostream>
 #include <memory>
+#include <chrono>
+#include <thread>
 #include <sas_core/eigen3_std_conversions.hpp>
+#include <mavros_msgs/msg/state.hpp>
 
 namespace sas
 {
@@ -40,6 +43,8 @@ public:
     bool connected{false};
     bool motor_on{false};
     bool initialized{false};
+    bool mavros_connected{false};
+
 	Eigen::MatrixXd B_pinv;
 	Eigen::VectorXd last_pwm_;
 	Eigen::VectorXd last_tau_;
@@ -48,6 +53,7 @@ public:
     std::shared_ptr<rclcpp::Publisher<mavros_msgs::msg::OverrideRCIn>> override_rc_pub;  //multiple things can own/point to the object
     std::unique_ptr<realtime_tools::RealtimePublisher<mavros_msgs::msg::OverrideRCIn>> rt_override_rc_pub;  // only one owner
     rclcpp::Client<rcl_interfaces::srv::SetParameters>::SharedPtr set_params_client;
+    rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr mavros_state_sub;
 
     Impl()
         {
@@ -242,6 +248,29 @@ void RobotDriverBrov2::connect()
     if (!impl_->set_params_client->service_is_ready())
         throw std::runtime_error("MAVROS param service not available.");
 
+    // Check MAVROS connection to ArduSub
+    impl_->mavros_state_sub = impl_->node->create_subscription<mavros_msgs::msg::State>(
+            "/mavros/state",
+            rclcpp::SensorDataQoS(),
+            [this](mavros_msgs::msg::State::SharedPtr msg) {
+                impl_->mavros_connected = msg->connected;
+            });
+
+    // Wait for MAVROS connection
+    const auto start = std::chrono::steady_clock::now();
+
+    while (rclcpp::ok() && !(*break_loops_) && !impl_->mavros_connected &&
+           std::chrono::steady_clock::now() - start < std::chrono::seconds(10))
+    {
+        rclcpp::spin_some(impl_->node);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+
+    if (!impl_->mavros_connected)
+        throw std::runtime_error("MAVROS is not connected to ArduSub.");
+
+    RCLCPP_INFO(impl_->node->get_logger(), "MAVROS connected to ArduSub.");
+
     impl_->connected = true;
     impl_->motor_on = false;
     RCLCPP_INFO(impl_->node->get_logger(),
@@ -394,6 +423,8 @@ void RobotDriverBrov2::disconnect()
     impl_->connected = false;
     impl_->rt_override_rc_pub.reset();
     impl_->override_rc_pub.reset();
+    impl_->mavros_state_sub.reset();
+    impl_->mavros_connected = false;
     impl_->node.reset();
 }
 
