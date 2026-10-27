@@ -307,6 +307,7 @@ void RobotDriverBrov2::initialize()
             request->parameters.push_back(param);    // Put that instruction into request
         }
 
+		if (configuration_.set_battery_voltage)
 		{
   	       rcl_interfaces::msg::Parameter batt_param;
    		   batt_param.name = configuration_.sim_batt_voltage_param;

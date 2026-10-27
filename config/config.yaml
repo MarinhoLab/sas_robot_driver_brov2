@@ -1,6 +1,7 @@
 brov2_1:
   ros__parameters:
     thread_sampling_time_sec: 0.002
+    set_battery_voltage: false
     batt_voltage: 15.8
     pwm_mapping: "bivariate"
 
@@ -32,6 +33,7 @@ brov2_1:
 brov2_sim_1:
   ros__parameters:
     thread_sampling_time_sec: 0.002
+    set_battery_voltage: true
     batt_voltage: 15.8
     pwm_mapping: "linear"
 
@@ -63,6 +65,7 @@ brov2_sim_1:
 brov2_heavy_1:
   ros__parameters:
     thread_sampling_time_sec: 0.002
+    set_battery_voltage: false
     batt_voltage: 15.8
     pwm_mapping: "bivariate"
 
@@ -94,6 +97,7 @@ brov2_heavy_1:
 brov2_heavy_sim_1:
   ros__parameters:
     thread_sampling_time_sec: 0.002
+    set_battery_voltage: true
     batt_voltage: 15.8
     pwm_mapping: "linear"
 

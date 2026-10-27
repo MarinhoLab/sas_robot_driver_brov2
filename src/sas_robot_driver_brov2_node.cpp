@@ -80,12 +80,13 @@ int main(int argc, char** argv)
 		std::vector<std::string> servo_function_params;
 
     	// Reads ros2 parameters into c++ variables
+		sas::get_ros_parameter(node, "pwm_mapping", configuration.pwm_mapping);
 		sas::get_ros_parameter(node, "rc_override_topic",  configuration.rc_override_topic);
 		sas::get_ros_parameter(node, "param_service_name", configuration.param_service_name);
+		sas::get_ros_parameter(node, "set_battery_voltage", configuration.set_battery_voltage);
 
     	sas::get_ros_parameter(node, "batt_voltage", batt_voltage);
 		sas::get_ros_parameter(node, "thruster_channels", thruster_channels);
-		sas::get_ros_parameter(node, "pwm_mapping", configuration.pwm_mapping);
 		sas::get_ros_parameter(node, "thruster_neutral_pwm", thruster_neutral_pwm);
 		sas::get_ros_parameter(node, "thruster_min_pwm", thruster_min_pwm);
 		sas::get_ros_parameter(node, "thruster_max_pwm", thruster_max_pwm);
