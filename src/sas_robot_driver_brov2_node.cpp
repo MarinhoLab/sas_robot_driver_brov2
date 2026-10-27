@@ -84,6 +84,7 @@ int main(int argc, char** argv)
 		sas::get_ros_parameter(node, "rc_override_topic",  configuration.rc_override_topic);
 		sas::get_ros_parameter(node, "param_service_name", configuration.param_service_name);
 		sas::get_ros_parameter(node, "set_battery_voltage", configuration.set_battery_voltage);
+		sas::get_ros_parameter(node, "use_battery_telemetry", configuration.use_battery_telemetry);
 
     	sas::get_ros_parameter(node, "batt_voltage", batt_voltage);
 		sas::get_ros_parameter(node, "thruster_channels", thruster_channels);

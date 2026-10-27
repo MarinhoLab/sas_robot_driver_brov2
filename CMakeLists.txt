@@ -14,6 +14,7 @@ find_package(sas_common REQUIRED)
 find_package(sas_robot_driver REQUIRED)
 find_package(mavros_msgs REQUIRED)
 find_package(realtime_tools REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
 ####################################
 # CPP Shared Library Block [BEGIN] #

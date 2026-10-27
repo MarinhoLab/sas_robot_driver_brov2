@@ -27,11 +27,14 @@
 #include "sas_robot_driver_brov2/sas_robot_driver_brov2.hpp"
 #include "sas_robot_driver_brov2/driver_thruster_mapping.hpp"
 #include <iostream>
+#include <limits>
+#include <cmath>
 #include <memory>
 #include <chrono>
 #include <thread>
 #include <sas_core/eigen3_std_conversions.hpp>
 #include <mavros_msgs/msg/state.hpp>
+#include <sensor_msgs/msg/battery_state.hpp>
 
 namespace sas
 {
@@ -49,11 +52,14 @@ public:
 	Eigen::VectorXd last_pwm_;
 	Eigen::VectorXd last_tau_;
 
+	double battery_voltage{std::numeric_limits<double>::quiet_NaN()};
+
     std::shared_ptr<rclcpp::Node> node;  // defines node as a Impl member variable and it points to the ROS object -> rclcpp::Node
     std::shared_ptr<rclcpp::Publisher<mavros_msgs::msg::OverrideRCIn>> override_rc_pub;  //multiple things can own/point to the object
     std::unique_ptr<realtime_tools::RealtimePublisher<mavros_msgs::msg::OverrideRCIn>> rt_override_rc_pub;  // only one owner
     rclcpp::Client<rcl_interfaces::srv::SetParameters>::SharedPtr set_params_client;
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr mavros_state_sub;
+	rclcpp::Subscription<sensor_msgs::msg::BatteryState>::SharedPtr battery_sub;
 
     Impl()
         {
@@ -148,6 +154,15 @@ void RobotDriverBrov2::set_target_joint_torques(const Eigen::VectorXd &tau) {  /
         throw std::runtime_error("RC override publisher not ready.");
 	}
 
+	// Get battery voltage for PWM mapping
+    double V = configuration_.v_bus;
+
+    if (configuration_.use_battery_telemetry && configuration_.pwm_mapping == "bivariate")
+    {
+        rclcpp::spin_some(impl_->node);
+        V = impl_->battery_voltage;
+    }
+
 	// 3 - Allocation
 	const auto N = static_cast<Eigen::Index>(configuration_.thruster_configs.size());
 	if (impl_->B_pinv.rows() != N || impl_->B_pinv.cols() != 6)
@@ -177,7 +192,7 @@ void RobotDriverBrov2::set_target_joint_torques(const Eigen::VectorXd &tau) {  /
             {
                 pwm = force_to_pwm_bivariate(
                     Fi,
-                    configuration_.v_bus,
+                    V,
                     configuration_.fwd_thrust_curve_coeffs,
                     configuration_.rev_thrust_curve_coeffs,
                     cfg.neutral_pwm,
@@ -215,6 +230,22 @@ void RobotDriverBrov2::connect()
 
     // 1 - Create a node
     impl_->node = rclcpp::Node::make_shared("sas_thruster_node");
+
+    if (configuration_.use_battery_telemetry)
+    {
+        impl_->battery_sub = impl_->node->create_subscription<sensor_msgs::msg::BatteryState>(
+                "/mavros/battery",
+                rclcpp::SensorDataQoS(),
+                [this](sensor_msgs::msg::BatteryState::SharedPtr msg)
+                {
+                    if (msg->present &&
+                        std::isfinite(msg->voltage) &&
+                        msg->voltage > 0.0)
+                    {
+                        impl_->battery_voltage = msg->voltage;
+                    }
+                });
+    }
 
     // 2-  Create the RC override publisher + wrap it in a realtime safe publisher
     impl_->override_rc_pub =
