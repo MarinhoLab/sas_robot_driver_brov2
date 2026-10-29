@@ -8,6 +8,7 @@ import time
 import cv2
 import numpy as np
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 
@@ -32,8 +33,13 @@ class Rec(Node):
 rclpy.init()
 n = Rec()
 t0 = time.time()
-while time.time() - t0 < duration:
-    rclpy.spin_once(n, timeout_sec=0.1)
+try:
+    while time.time() - t0 < duration:
+        rclpy.spin_once(n, timeout_sec=0.1)
+except (KeyboardInterrupt, ExternalShutdownException):
+    pass
+except Exception as e:
+    print(e)
 n.w.release()
 print('frames', n.n)
 
