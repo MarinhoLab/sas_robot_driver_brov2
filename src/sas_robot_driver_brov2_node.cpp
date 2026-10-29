@@ -171,7 +171,7 @@ int main(int argc, char** argv)
         sas::RobotDriverROS robot_driver_ros(node,
                                              robot_driver_myrobot,
                                              robot_driver_ros_configuration,
-                                             &kill_this_process);  // create an instance(object) of the SAS ROS wrapper class
+                                             std::make_shared<marinholab::sas::core::ShutdownSignaler>(&kill_this_process));  // create an instance(object) of the SAS ROS wrapper class
         robot_driver_ros.control_loop();
 
     }

@@ -57,7 +57,7 @@ public:
 };
 
 RobotDriverBrov2::RobotDriverBrov2(const RobotDriverBrov2Configuration& configuration, std::atomic_bool* break_loops):
-    RobotDriver(break_loops),
+    RobotDriver(std::make_shared<marinholab::sas::core::ShutdownSignaler>(break_loops)),
     configuration_(configuration)
 {
    // joint_limits_ = configuration.joint_limits; //for the superclass
