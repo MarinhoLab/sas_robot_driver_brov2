@@ -2,7 +2,9 @@
 
 Usage: python3 record.py <out.mp4> <seconds>
 """
-import sys, time
+import sys
+import time
+
 import cv2
 import numpy as np
 import rclpy
