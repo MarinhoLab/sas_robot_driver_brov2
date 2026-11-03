@@ -160,7 +160,9 @@ void RobotDriverBrov2::set_target_joint_torques(const Eigen::VectorXd &tau) {  /
     if (configuration_.use_battery_telemetry && configuration_.pwm_mapping == "bivariate")
     {
         rclcpp::spin_some(impl_->node);
-        V = impl_->battery_voltage;
+        // Fall back to the configured bus voltage until a valid telemetry sample arrives.
+        if (std::isfinite(impl_->battery_voltage))
+            V = impl_->battery_voltage;
     }
 
 	// 3 - Allocation
@@ -356,6 +358,32 @@ void RobotDriverBrov2::initialize()
                 std::chrono::seconds(5)) ==
             rclcpp::FutureReturnCode::SUCCESS)
         {
+            auto response = future.get();
+            const size_t expected_results = configuration_.thruster_configs.size() +
+                (configuration_.set_battery_voltage ? 1u : 0u);
+            bool all_accepted = response->results.size() == expected_results;
+            for (const auto & result : response->results)
+            {
+                if (!result.successful)
+                {
+                    all_accepted = false;
+                    RCLCPP_WARN(impl_->node->get_logger(),
+                        "MAVROS rejected parameter set: %s",
+                        result.reason.c_str());
+                }
+            }
+
+            if (!all_accepted)
+            {
+                // MAVROS refuses parameters until it has fetched the FCU
+                // parameter list (~10 s after connecting). Retry until it
+                // actually applies them instead of assuming success.
+                RCLCPP_WARN(impl_->node->get_logger(),
+                    "Parameters not accepted yet, retrying...");
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                continue;
+            }
+
             RCLCPP_INFO(impl_->node->get_logger(),
                 "All thrusters set to RC passthrough.");
 
