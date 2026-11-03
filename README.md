@@ -52,6 +52,7 @@ Replace `<model>` with `brov2` or `brov2_heavy`.
 > ```bash
 > ros2 topic echo /mavros/state --once
 > ```
+Confirm that the output contains: `connected: true` and `armed: true`
 
  
 ### 3. Test the driver
