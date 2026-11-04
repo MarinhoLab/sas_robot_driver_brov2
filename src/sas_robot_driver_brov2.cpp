@@ -47,6 +47,8 @@ public:
     bool motor_on{false};
     bool initialized{false};
     bool mavros_connected{false};
+    bool mavros_armed{false};
+    bool state_received{false};
 
 	Eigen::MatrixXd B_pinv;
 	Eigen::VectorXd last_pwm_;
@@ -55,6 +57,7 @@ public:
 	double battery_voltage{std::numeric_limits<double>::quiet_NaN()};
 
     std::shared_ptr<rclcpp::Node> node;  // defines node as a Impl member variable and it points to the ROS object -> rclcpp::Node
+    std::chrono::steady_clock::time_point last_state_time{};
     std::shared_ptr<rclcpp::Publisher<mavros_msgs::msg::OverrideRCIn>> override_rc_pub;  //multiple things can own/point to the object
     std::unique_ptr<realtime_tools::RealtimePublisher<mavros_msgs::msg::OverrideRCIn>> rt_override_rc_pub;  // only one owner
     rclcpp::Client<rcl_interfaces::srv::SetParameters>::SharedPtr set_params_client;
@@ -142,6 +145,12 @@ void RobotDriverBrov2::set_target_joint_torques(const Eigen::VectorXd &tau) {  /
     if (!impl_->connected || !impl_->initialized)
         throw std::runtime_error("Not connected/initialized.");
 
+    // Process MAVROS callbacks, check for new ROS2 messages
+    rclcpp::spin_some(impl_->node);
+
+    const bool state_fresh = impl_->state_received && (std::chrono::steady_clock::now() - impl_->last_state_time < std::chrono::seconds(1));
+    const bool allow_thrust = impl_->mavros_connected && impl_->mavros_armed && state_fresh;
+
     // 1 - Input check: tau must be 6D
     if (tau.size() !=6)
     {
@@ -159,7 +168,6 @@ void RobotDriverBrov2::set_target_joint_torques(const Eigen::VectorXd &tau) {  /
 
     if (configuration_.use_battery_telemetry && configuration_.pwm_mapping == "bivariate")
     {
-        rclcpp::spin_some(impl_->node);
         // Fall back to the configured bus voltage until a valid telemetry sample arrives.
         if (std::isfinite(impl_->battery_voltage))
             V = impl_->battery_voltage;
@@ -206,6 +214,11 @@ void RobotDriverBrov2::set_target_joint_torques(const Eigen::VectorXd &tau) {  /
             else
             {
                 throw std::invalid_argument("Unsupported PWM mapping");
+            }
+
+            if (!allow_thrust)
+            {
+                pwm = cfg.neutral_pwm;
             }
 
             impl_->rt_override_rc_pub->msg_.channels[cfg.channel - 1] = static_cast<uint16_t>(std::lround(pwm)); // write value into correct RC channel slot
@@ -287,6 +300,9 @@ void RobotDriverBrov2::connect()
             rclcpp::SensorDataQoS(),
             [this](mavros_msgs::msg::State::SharedPtr msg) {
                 impl_->mavros_connected = msg->connected;
+                impl_->mavros_armed = msg->armed;
+                impl_->last_state_time = std::chrono::steady_clock::now();
+                impl_->state_received = true;
             });
 
     // Wait for MAVROS connection
