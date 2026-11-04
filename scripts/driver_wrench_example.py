@@ -32,7 +32,7 @@ import numpy
 from dqrobotics import *  # Despite what PyCharm might say, this is very much necessary or DQs will not be recognized
 from sas_common import rclcpp_init, rclcpp_Node, rclcpp_shutdown, rclcpp_spin_some
 from sas_core import Clock, Statistics
-from sas_robot_driver import RobotDriverClient
+from sas_robot_driver import RobotDriverClient, MODE_BLACKLIST_FLAG
 
 # 1. Test configuration
 dt = 0.01
@@ -49,12 +49,12 @@ tau_zero = numpy.zeros(6, dtype=numpy.float64)
 S_driver = numpy.diag([1, -1, -1, 1, -1, -1])
 
 basic_translations = [
-    ("Forward",  [ force, 0, 0, 0, 0, 0]),
-    ("Backward", [-force, 0, 0, 0, 0, 0]),
-    ("Left",     [0,  force, 0, 0, 0, 0]),
-    ("Right",    [0, -force, 0, 0, 0, 0]),
-    ("Up",       [0, 0,  force, 0, 0, 0]),
-    ("Down",     [0, 0, -force, 0, 0, 0]),
+    ("Forward",        [ force, 0, 0, 0, 0, 0]),
+    ("Backward",       [-force, 0, 0, 0, 0, 0]),
+    ("Right/Left",     [0,  force, 0, 0, 0, 0]),
+    ("Left/Right",     [0, -force, 0, 0, 0, 0]),
+    ("Up",             [0, 0,  force, 0, 0, 0]),
+    ("Down",           [0, 0, -force, 0, 0, 0]),
 ]
 
 basic_rotations = [
@@ -112,7 +112,7 @@ def main(args=None):
         # Initialize the RobotDriverClient. The prefix is the driver node name, which is
         # brov2_1 (brov2_launch.py) or brov2_heavy_1 (brov2_heavy_launch.py).
         prefix = sys.argv[1] if len(sys.argv) > 1 else 'brov2_1'
-        rdi = RobotDriverClient(node, prefix)
+        rdi = RobotDriverClient(node, prefix, [MODE_BLACKLIST_FLAG.WATCHDOG_CONTROL])
 
         # Wait for RobotDriverClient to be enabled
         while not rdi.is_enabled():
