@@ -29,12 +29,16 @@
  *        through sas::RobotDriverROS.
  */
 
+#include <cmath>
+#include <algorithm>
 #include <rclcpp/rclcpp.hpp>
 #include <sas_common/sas_common.hpp>
 #include <sas_core/eigen3_std_conversions.hpp>
 #include <sas_robot_driver/sas_robot_driver_ros.hpp>
 #include <sas_robot_driver_brov2/sas_robot_driver_brov2.hpp>
 #include <dqrobotics/utils/DQ_Math.h>
+#include <sas_msgs/msg/watchdog_trigger.hpp>
+#include <std_msgs/msg/float64_multi_array.hpp>
 
 /*********************************************
  * SIGNAL HANDLER
@@ -56,6 +60,28 @@ int main(int argc, char** argv)
     rclcpp::init(argc,argv,rclcpp::InitOptions(),rclcpp::SignalHandlerOptions::None);
 
     auto node = std::make_shared<rclcpp::Node>("sas_robot_driver_brov2");
+
+    const std::string prefix = node->get_name();
+
+    // Creates the publisher that sends heartbeat messages to SAS
+    auto watchdog_pub = node->create_publisher<sas_msgs::msg::WatchdogTrigger>(prefix + "/set/watchdog_trigger", 1);
+
+    // Listens for new wrench messages from controller
+    auto wrench_watchdog_sub = node->create_subscription<std_msgs::msg::Float64MultiArray>(
+            prefix + "/set/target_joint_forces", 1,
+            [watchdog_pub](const std_msgs::msg::Float64MultiArray::SharedPtr msg)
+            {
+                if (msg->data.size() != 6 || !std::all_of(msg->data.begin(), msg->data.end(), [](double x) { return std::isfinite(x); }))
+                    return;
+
+                sas_msgs::msg::WatchdogTrigger trigger;
+                trigger.header.stamp = rclcpp::Clock(RCL_SYSTEM_TIME).now();
+                trigger.status = true;
+                trigger.period_in_seconds = 0.2;
+                trigger.maximum_acceptable_delay_in_seconds = 0.1;
+
+                watchdog_pub->publish(trigger);
+            });
 
     try
     {
