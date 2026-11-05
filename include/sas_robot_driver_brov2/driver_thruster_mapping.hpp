@@ -32,12 +32,12 @@
 
 namespace sas
 {
-	/**
+/**
 	 * @brief Convert a thruster force into a PWM command.
 	 * @param F The desired thruster force.
 	 * @param min_pwm The minimum allowed PWM value.
 	 * @param max_pwm The maximum allowed PWM value.
 	 * @return The PWM command, saturated to [min_pwm, max_pwm].
 	 */
-	double force_to_pwm(double F, double min_pwm, double max_pwm);
-}
+double force_to_pwm(double F, double min_pwm, double max_pwm);
+}  // namespace sas

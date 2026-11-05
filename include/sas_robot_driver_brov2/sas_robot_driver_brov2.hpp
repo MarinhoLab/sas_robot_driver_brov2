@@ -31,7 +31,6 @@
 #include <mavros_msgs/msg/override_rc_in.hpp>
 #include <realtime_tools/realtime_publisher.hpp>
 
-
 /**
  * @file sas_robot_driver_brov2.hpp
  * @brief SAS robot driver for the BlueROV2 and BlueROV2 Heavy, using MAVROS RC override.
@@ -45,17 +44,17 @@ namespace sas
  */
 struct ThrusterConfig
 {
-    int    channel;                   ///< RC channel index (1-based)
-    int    neutral_pwm;               ///< PWM to send when stopped
-    int    servo_function_values;     ///< Servo function value (1 is passthrough mode)
+    int channel;                ///< RC channel index (1-based)
+    int neutral_pwm;            ///< PWM to send when stopped
+    int servo_function_values;  ///< Servo function value (1 is passthrough mode)
 
-    double f_min;                     ///< Min allowed thruster force
-    double f_max;                     ///< Max allowed thruster force
-    double min_pwm;                   ///< Min allowed PWM
-    double max_pwm;                   ///< Max allowed PWM
-    double deadband_pwm;              ///< PWM deadband
+    double f_min;         ///< Min allowed thruster force
+    double f_max;         ///< Max allowed thruster force
+    double min_pwm;       ///< Min allowed PWM
+    double max_pwm;       ///< Max allowed PWM
+    double deadband_pwm;  ///< PWM deadband
 
-    std::string servo_function_param; ///< Autopilot parameter name, e.g. "SERVO1_FUNCTION"
+    std::string servo_function_param;  ///< Autopilot parameter name, e.g. "SERVO1_FUNCTION"
 };
 
 /**
@@ -63,18 +62,18 @@ struct ThrusterConfig
  */
 struct RobotDriverBrov2Configuration
 {
-    std::vector<ThrusterConfig> thruster_configs;                    ///< One ThrusterConfig per thruster
-    std::vector<double> fwd_thrust_curve_coeffs;                     ///< Forward thrust curve coefficients
-    std::vector<double> rev_thrust_curve_coeffs;                     ///< Reverse thrust curve coefficients
+    std::vector<ThrusterConfig> thruster_configs;  ///< One ThrusterConfig per thruster
+    std::vector<double> fwd_thrust_curve_coeffs;   ///< Forward thrust curve coefficients
+    std::vector<double> rev_thrust_curve_coeffs;   ///< Reverse thrust curve coefficients
 
     std::string rc_override_topic{"mavros/rc/override"};             ///< Topic the RC override is published to
     std::string node_name_prefix{"sas_thruster_node"};               ///< Prefix of the internal node name
     std::string param_service_name{"/mavros/param/set_parameters"};  ///< MAVROS parameter service
     std::string sim_batt_voltage_param{"SIM_BATT_VOLTAGE"};          ///< Simulated battery voltage parameter
 
-    double v_bus;                                                    ///< Bus (battery) voltage
+    double v_bus;  ///< Bus (battery) voltage
 
-    Eigen::MatrixXd B;                                               ///< Thruster allocation matrix (6 x number of thrusters)
+    Eigen::MatrixXd B;  ///< Thruster allocation matrix (6 x number of thrusters)
 };
 
 /**
@@ -82,7 +81,7 @@ struct RobotDriverBrov2Configuration
  *        that is allocated to thrusters and sent as PWM through MAVROS RC override.
  *        The position interface is not supported.
  */
-class RobotDriverBrov2: public RobotDriver
+class RobotDriverBrov2 : public RobotDriver
 {
 private:
     RobotDriverBrov2Configuration configuration_;
@@ -90,11 +89,11 @@ private:
     //Use the Impl idiom to "hide" internal driver sources
     class Impl;
     std::unique_ptr<Impl> impl_;
-public:
 
+public:
     // Prevent copies as usually drivers have threads
-    RobotDriverBrov2(const RobotDriverBrov2&)=delete;
-    RobotDriverBrov2()=delete;
+    RobotDriverBrov2(const RobotDriverBrov2&) = delete;
+    RobotDriverBrov2() = delete;
     ~RobotDriverBrov2();
 
     /**
@@ -102,7 +101,7 @@ public:
      * @param configuration The driver configuration.
      * @param break_loops Pointer to a flag that, when true, breaks the driver loops.
      */
-    RobotDriverBrov2(const RobotDriverBrov2Configuration &configuration, std::atomic_bool* break_loops);
+    RobotDriverBrov2(const RobotDriverBrov2Configuration& configuration, std::atomic_bool* break_loops);
 
     /**
      * @brief Get the last commanded PWM vector (there is no sensor feedback).
@@ -140,6 +139,5 @@ public:
     void initialize() override;
     /// @brief Return the thrusters to neutral.
     void deinitialize() override;
-
 };
-}
+}  // namespace sas

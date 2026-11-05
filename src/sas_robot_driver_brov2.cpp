@@ -23,7 +23,6 @@
 #
 # ################################################################*/
 
-
 #include "sas_robot_driver_brov2/sas_robot_driver_brov2.hpp"
 #include "sas_robot_driver_brov2/driver_thruster_mapping.hpp"
 #include <iostream>
@@ -35,32 +34,29 @@ namespace sas
 
 class RobotDriverBrov2::Impl
 {
-
 public:
     bool connected{false};
     bool motor_on{false};
     bool initialized{false};
-	Eigen::MatrixXd B_pinv;
-	Eigen::VectorXd last_pwm_;
-	Eigen::VectorXd last_tau_;
+    Eigen::MatrixXd B_pinv;
+    Eigen::VectorXd last_pwm_;
+    Eigen::VectorXd last_tau_;
 
-    std::shared_ptr<rclcpp::Node> node;  // defines node as a Impl member variable and it points to the ROS object -> rclcpp::Node
-    std::shared_ptr<rclcpp::Publisher<mavros_msgs::msg::OverrideRCIn>> override_rc_pub;  //multiple things can own/point to the object
-    std::unique_ptr<realtime_tools::RealtimePublisher<mavros_msgs::msg::OverrideRCIn>> rt_override_rc_pub;  // only one owner
+    std::shared_ptr<rclcpp::Node>
+        node;  // defines node as a Impl member variable and it points to the ROS object -> rclcpp::Node
+    std::shared_ptr<rclcpp::Publisher<mavros_msgs::msg::OverrideRCIn>>
+        override_rc_pub;  //multiple things can own/point to the object
+    std::unique_ptr<realtime_tools::RealtimePublisher<mavros_msgs::msg::OverrideRCIn>>
+        rt_override_rc_pub;  // only one owner
     rclcpp::Client<rcl_interfaces::srv::SetParameters>::SharedPtr set_params_client;
 
-    Impl()
-        {
-
-        }
-
+    Impl() {}
 };
 
-RobotDriverBrov2::RobotDriverBrov2(const RobotDriverBrov2Configuration& configuration, std::atomic_bool* break_loops):
-    RobotDriver(std::make_shared<marinholab::sas::core::ShutdownSignaler>(break_loops)),
-    configuration_(configuration)
+RobotDriverBrov2::RobotDriverBrov2(const RobotDriverBrov2Configuration& configuration, std::atomic_bool* break_loops)
+    : RobotDriver(std::make_shared<marinholab::sas::core::ShutdownSignaler>(break_loops)), configuration_(configuration)
 {
-   // joint_limits_ = configuration.joint_limits; //for the superclass
+    // joint_limits_ = configuration.joint_limits; //for the superclass
     impl_ = std::make_unique<RobotDriverBrov2::Impl>();
 
     const int n = static_cast<int>(configuration.thruster_configs.size());
@@ -73,10 +69,7 @@ RobotDriverBrov2::RobotDriverBrov2(const RobotDriverBrov2Configuration& configur
     joint_limits_ = {limits_min, limits_max};
 }
 
-RobotDriverBrov2::~RobotDriverBrov2()
-{
-
-}
+RobotDriverBrov2::~RobotDriverBrov2() {}
 
 Eigen::VectorXd RobotDriverBrov2::get_joint_positions()
 {
@@ -92,8 +85,7 @@ Eigen::VectorXd RobotDriverBrov2::get_joint_positions()
 
 void RobotDriverBrov2::set_target_joint_positions(const Eigen::VectorXd&)
 {
-    throw std::runtime_error(
-        "RobotDriverBrov2: position interface is not supported. Use set_target_joint_torques().");
+    throw std::runtime_error("RobotDriverBrov2: position interface is not supported. Use set_target_joint_torques().");
 }
 
 /**
@@ -125,43 +117,51 @@ Eigen::VectorXd RobotDriverBrov2::get_joint_torques()
  *
  * @param tau The desired 6D wrench.
  */
-void RobotDriverBrov2::set_target_joint_torques(const Eigen::VectorXd &tau) {  //  receives  PWM commands as a vector of doubles.
+void RobotDriverBrov2::set_target_joint_torques(const Eigen::VectorXd& tau)
+{  //  receives  PWM commands as a vector of doubles.
 
     if (!impl_->connected || !impl_->initialized)
         throw std::runtime_error("Not connected/initialized.");
 
     // 1 - Input check: tau must be 6D
-    if (tau.size() !=6)
+    if (tau.size() != 6)
     {
         throw std::runtime_error("Incorrect vector size in RobotDriverBrov2::set_target_joint_torques");
     }
-	impl_->last_tau_ = tau;
+    impl_->last_tau_ = tau;
 
     // 2 - Check publisher exists
-    if (!impl_->rt_override_rc_pub) {
+    if (!impl_->rt_override_rc_pub)
+    {
         throw std::runtime_error("RC override publisher not ready.");
-	}
+    }
 
-	// 3 - Allocation
-	const auto N = static_cast<Eigen::Index>(configuration_.thruster_configs.size());
-	if (impl_->B_pinv.rows() != N || impl_->B_pinv.cols() != 6)
-		throw std::runtime_error("Allocation matrix pseudoinverse not initialized or wrong size");
+    // 3 - Allocation
+    const auto N = static_cast<Eigen::Index>(configuration_.thruster_configs.size());
+    if (impl_->B_pinv.rows() != N || impl_->B_pinv.cols() != 6)
+        throw std::runtime_error("Allocation matrix pseudoinverse not initialized or wrong size");
 
-	Eigen::VectorXd f = impl_->B_pinv * tau;  // thruster force
+    Eigen::VectorXd f = impl_->B_pinv * tau;  // thruster force
 
     // 4 -  Publish pwm overrides to corresponding RC channel
-    if (impl_->rt_override_rc_pub && impl_->rt_override_rc_pub->trylock()) { //checking the publisher object exists and if we can get access
-        impl_->rt_override_rc_pub->msg_.channels.fill(mavros_msgs::msg::OverrideRCIn::CHAN_NOCHANGE); // don't override unset channels
-        for (int i = 0; i < static_cast<int>(configuration_.thruster_configs.size()); ++i) {  //number of thrusters confgured
-            const auto & cfg = configuration_.thruster_configs[i];  // makes cfg refer to the configuration data for thruster i
+    if (impl_->rt_override_rc_pub && impl_->rt_override_rc_pub->trylock())
+    {  //checking the publisher object exists and if we can get access
+        impl_->rt_override_rc_pub->msg_.channels.fill(
+            mavros_msgs::msg::OverrideRCIn::CHAN_NOCHANGE);  // don't override unset channels
+        for (int i = 0; i < static_cast<int>(configuration_.thruster_configs.size()); ++i)
+        {  //number of thrusters confgured
+            const auto& cfg =
+                configuration_.thruster_configs[i];  // makes cfg refer to the configuration data for thruster i
 
-			const double Fi = std::clamp(f(i), cfg.f_min, cfg.f_max);
+            const double Fi = std::clamp(f(i), cfg.f_min, cfg.f_max);
             double pwm = force_to_pwm(Fi, cfg.min_pwm, cfg.max_pwm);
 
-            impl_->rt_override_rc_pub->msg_.channels[cfg.channel - 1] = static_cast<uint16_t>(std::lround(pwm)); // write value into correct RC channel slot
-            impl_->last_pwm_(i) = pwm;   // stores the last commanded PWM per thruster for logging
+            impl_->rt_override_rc_pub->msg_.channels[cfg.channel - 1] =
+                static_cast<uint16_t>(std::lround(pwm));  // write value into correct RC channel slot
+            impl_->last_pwm_(i) = pwm;                    // stores the last commanded PWM per thruster for logging
         }
-        impl_->rt_override_rc_pub->unlockAndPublish();  //actually publish it, Publishes the current msg_ on /mavros/rc/override
+        impl_->rt_override_rc_pub
+            ->unlockAndPublish();  //actually publish it, Publishes the current msg_ on /mavros/rc/override
     }
 }
 
@@ -177,36 +177,30 @@ void RobotDriverBrov2::set_target_joint_torques(const Eigen::VectorXd &tau) {  /
 void RobotDriverBrov2::connect()
 {
     //An example of exception to throw.
-    if(impl_->connected)
+    if (impl_->connected)
         throw std::runtime_error("Already connected.");
 
     // 1 - Create a node
     impl_->node = rclcpp::Node::make_shared("sas_thruster_node");
 
     // 2-  Create the RC override publisher + wrap it in a realtime safe publisher
-    impl_->override_rc_pub =
-        impl_->node->create_publisher<mavros_msgs::msg::OverrideRCIn>(
-            configuration_.rc_override_topic,
-            rclcpp::SystemDefaultsQoS());
+    impl_->override_rc_pub = impl_->node->create_publisher<mavros_msgs::msg::OverrideRCIn>(
+        configuration_.rc_override_topic, rclcpp::SystemDefaultsQoS());
 
     impl_->rt_override_rc_pub =
-    std::make_unique<realtime_tools::RealtimePublisher<mavros_msgs::msg::OverrideRCIn>>(
-        impl_->override_rc_pub);
+        std::make_unique<realtime_tools::RealtimePublisher<mavros_msgs::msg::OverrideRCIn>>(impl_->override_rc_pub);
 
     // 3 - initialize all RC channels to not touch uncontrolled channels
     impl_->rt_override_rc_pub->msg_.channels.fill(mavros_msgs::msg::OverrideRCIn::CHAN_NOCHANGE);
 
     // 4 - Create service client to mavros parameter service
-    impl_->set_params_client = impl_->node->create_client<rcl_interfaces::srv::SetParameters>(configuration_.param_service_name);  // "/mavros/param/set_parameters"
+    impl_->set_params_client = impl_->node->create_client<rcl_interfaces::srv::SetParameters>(
+        configuration_.param_service_name);  // "/mavros/param/set_parameters"
 
-    RCLCPP_INFO(impl_->node->get_logger(),
-    "Waiting for %s...",
-    configuration_.param_service_name.c_str());
+    RCLCPP_INFO(impl_->node->get_logger(), "Waiting for %s...", configuration_.param_service_name.c_str());
 
-    while (!(*break_loops_) && !impl_->set_params_client->wait_for_service(
-        std::chrono::milliseconds(50)))
+    while (!(*break_loops_) && !impl_->set_params_client->wait_for_service(std::chrono::milliseconds(50)))
     {
-
     }
 
     if (*break_loops_)
@@ -217,9 +211,8 @@ void RobotDriverBrov2::connect()
 
     impl_->connected = true;
     impl_->motor_on = false;
-    RCLCPP_INFO(impl_->node->get_logger(),
-    "RobotDriverThruster: connected, publishing RC overrides on '%s'.",
-    configuration_.rc_override_topic.c_str());
+    RCLCPP_INFO(impl_->node->get_logger(), "RobotDriverThruster: connected, publishing RC overrides on '%s'.",
+                configuration_.rc_override_topic.c_str());
 
     //service exists, not called yet
 }
@@ -235,7 +228,7 @@ void RobotDriverBrov2::connect()
  */
 void RobotDriverBrov2::initialize()
 {
-     if (!impl_->connected)
+    if (!impl_->connected)
         throw std::runtime_error("Not connected.");
 
     // Call the service
@@ -243,79 +236,84 @@ void RobotDriverBrov2::initialize()
     {
         // 1 - Build the request
         auto request = std::make_shared<rcl_interfaces::srv::SetParameters::Request>();
-        for (const auto & cfg : configuration_.thruster_configs) {
-            rcl_interfaces::msg::Parameter param;    // ROS2 request message type of whole object (parameter change)
-            param.name = cfg.servo_function_param;   // Field 1 name: "SERVO1_FUNCTION": which ArduSub parameter to change
-            param.value.type = rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER; // type of value
-            param.value.integer_value = cfg.servo_function_values;           // Field 2 value: change to 1 means RC passthrough.
-            request->parameters.push_back(param);    // Put that instruction into request
+        for (const auto& cfg : configuration_.thruster_configs)
+        {
+            rcl_interfaces::msg::Parameter param;  // ROS2 request message type of whole object (parameter change)
+            param.name =
+                cfg.servo_function_param;  // Field 1 name: "SERVO1_FUNCTION": which ArduSub parameter to change
+            param.value.type = rcl_interfaces::msg::ParameterType::PARAMETER_INTEGER;  // type of value
+            param.value.integer_value = cfg.servo_function_values;  // Field 2 value: change to 1 means RC passthrough.
+            request->parameters.push_back(param);                   // Put that instruction into request
         }
 
-		{
-  	       rcl_interfaces::msg::Parameter batt_param;
-   		   batt_param.name = configuration_.sim_batt_voltage_param;
-           batt_param.value.type = rcl_interfaces::msg::ParameterType::PARAMETER_DOUBLE;
-           batt_param.value.double_value = configuration_.v_bus;
-           request->parameters.push_back(batt_param);
-		}
+        {
+            rcl_interfaces::msg::Parameter batt_param;
+            batt_param.name = configuration_.sim_batt_voltage_param;
+            batt_param.value.type = rcl_interfaces::msg::ParameterType::PARAMETER_DOUBLE;
+            batt_param.value.double_value = configuration_.v_bus;
+            request->parameters.push_back(batt_param);
+        }
 
-         // 2 - Send request
+        // 2 - Send request
         auto future = impl_->set_params_client->async_send_request(request);
 
         // 3 - Wait for response
-        if (rclcpp::spin_until_future_complete(
-                impl_->node, future,
-                std::chrono::seconds(5)) ==
+        if (rclcpp::spin_until_future_complete(impl_->node, future, std::chrono::seconds(5)) ==
             rclcpp::FutureReturnCode::SUCCESS)
         {
-            RCLCPP_INFO(impl_->node->get_logger(),
-                "All thrusters set to RC passthrough.");
+            RCLCPP_INFO(impl_->node->get_logger(), "All thrusters set to RC passthrough.");
 
-		// 4 - Allocation setup
-		const auto N = static_cast<Eigen::Index>(configuration_.thruster_configs.size());
-		if (configuration_.B.rows() != 6 || configuration_.B.cols() != N)
-			throw std::runtime_error("Allocation matrix B had wrong size");
+            // 4 - Allocation setup
+            const auto N = static_cast<Eigen::Index>(configuration_.thruster_configs.size());
+            if (configuration_.B.rows() != 6 || configuration_.B.cols() != N)
+                throw std::runtime_error("Allocation matrix B had wrong size");
 
-		impl_->B_pinv = configuration_.B.completeOrthogonalDecomposition().pseudoInverse();
+            impl_->B_pinv = configuration_.B.completeOrthogonalDecomposition().pseudoInverse();
 
-		if (impl_->last_pwm_.size() != N){
-			impl_->last_pwm_ = Eigen::VectorXd::Constant(N, 1500);
-		}
+            if (impl_->last_pwm_.size() != N)
+            {
+                impl_->last_pwm_ = Eigen::VectorXd::Constant(N, 1500);
+            }
 
-	    // 4 - Chanel range check
-        const auto chan_count = static_cast<int>(impl_->rt_override_rc_pub->msg_.channels.size());
-   	    for (int i = 0; i < static_cast<int>(configuration_.thruster_configs.size()); ++i) {
-        const auto & cfg = configuration_.thruster_configs[i];
-        if (cfg.channel < 1 || cfg.channel > chan_count)
-            throw std::runtime_error(
-                "Thruster " + std::to_string(i) +
-                " has invalid channel " + std::to_string(cfg.channel));
+            // 4 - Chanel range check
+            const auto chan_count = static_cast<int>(impl_->rt_override_rc_pub->msg_.channels.size());
+            for (int i = 0; i < static_cast<int>(configuration_.thruster_configs.size()); ++i)
+            {
+                const auto& cfg = configuration_.thruster_configs[i];
+                if (cfg.channel < 1 || cfg.channel > chan_count)
+                    throw std::runtime_error("Thruster " + std::to_string(i) + " has invalid channel " +
+                                             std::to_string(cfg.channel));
+            }
+
+            // 5 - Send neutral
+            impl_->rt_override_rc_pub->msg_.channels.fill(mavros_msgs::msg::OverrideRCIn::CHAN_NOCHANGE);
+
+            for (int i = 0; i < static_cast<int>(configuration_.thruster_configs.size());
+                 ++i)  //number of thrusters confgured
+            {
+                const auto& cfg =
+                    configuration_.thruster_configs[i];  // makes cfg refer to the configuration data for thruster i
+                const int idx = cfg.channel - 1;         // convert RC channel numbering to C++ array index
+
+                if (idx < 0 || idx >= static_cast<int>(impl_->rt_override_rc_pub->msg_.channels.size()))
+                    throw std::runtime_error(
+                        "Thruster channel out of range.");  // prevent accessing channels out of range.
+
+                impl_->rt_override_rc_pub->msg_.channels[idx] =
+                    cfg.neutral_pwm;  // override only this thruster’s channel with its neutral PWM value
+                impl_->last_pwm_(i) = cfg.neutral_pwm;  // internal bookkeeping of last commanded pwm
+            }
+
+            impl_->override_rc_pub->publish(
+                impl_->rt_override_rc_pub
+                    ->msg_);  // publishes the OverrideRCIn message to the ROS topic e.g. /mavros/rc/override
+            impl_->last_tau_ = Eigen::VectorXd::Zero(6);
+            impl_->motor_on = true;
+            impl_->initialized = true;
+            return;
         }
 
-        // 5 - Send neutral
-        impl_->rt_override_rc_pub->msg_.channels.fill(mavros_msgs::msg::OverrideRCIn::CHAN_NOCHANGE);
-
-        for (int i = 0; i < static_cast<int>(configuration_.thruster_configs.size()); ++i) //number of thrusters confgured
-        {
-            const auto & cfg = configuration_.thruster_configs[i]; // makes cfg refer to the configuration data for thruster i
-            const int idx = cfg.channel - 1;   // convert RC channel numbering to C++ array index
-
-            if (idx < 0 || idx >= static_cast<int>(impl_->rt_override_rc_pub->msg_.channels.size()))
-                throw std::runtime_error("Thruster channel out of range.");  // prevent accessing channels out of range.
-
-            impl_->rt_override_rc_pub->msg_.channels[idx] = cfg.neutral_pwm;  // override only this thruster’s channel with its neutral PWM value
-            impl_->last_pwm_(i) = cfg.neutral_pwm;   // internal bookkeeping of last commanded pwm
-        }
-
-        impl_->override_rc_pub->publish(impl_->rt_override_rc_pub->msg_);  // publishes the OverrideRCIn message to the ROS topic e.g. /mavros/rc/override
-		impl_->last_tau_ = Eigen::VectorXd::Zero(6);
-        impl_->motor_on = true;
-        impl_->initialized = true;
-        return;
-        }
-
-        RCLCPP_WARN(impl_->node->get_logger(),
-            "Service call timed out, retrying...");
+        RCLCPP_WARN(impl_->node->get_logger(), "Service call timed out, retrying...");
     }
     throw std::runtime_error("initialize() did not complete successfully (interrupted).");
 }
@@ -326,18 +324,19 @@ void RobotDriverBrov2::initialize()
  */
 void RobotDriverBrov2::deinitialize()
 {
-    if (!impl_->connected)  // if not connected, we don’t have a valid ROS node/publisher/service client to talk to MAVROS
+    if (!impl_
+             ->connected)  // if not connected, we don’t have a valid ROS node/publisher/service client to talk to MAVROS
         return;
 
-    if (!impl_->initialized) // If never initialized, then there’s nothing to shut down
+    if (!impl_->initialized)  // If never initialized, then there’s nothing to shut down
         return;
 
     //  Send neutral
-    impl_->rt_override_rc_pub->msg_.channels.fill(mavros_msgs::msg::OverrideRCIn::CHAN_NOCHANGE); // override nothing
+    impl_->rt_override_rc_pub->msg_.channels.fill(mavros_msgs::msg::OverrideRCIn::CHAN_NOCHANGE);  // override nothing
 
     for (int i = 0; i < static_cast<int>(configuration_.thruster_configs.size()); ++i)
     {
-        const auto & cfg = configuration_.thruster_configs[i];
+        const auto& cfg = configuration_.thruster_configs[i];
         const int idx = cfg.channel - 1;
 
         if (idx < 0 || idx >= static_cast<int>(impl_->rt_override_rc_pub->msg_.channels.size()))
@@ -360,7 +359,8 @@ void RobotDriverBrov2::deinitialize()
  */
 void RobotDriverBrov2::disconnect()
 {
-    if (!impl_->connected) {
+    if (!impl_->connected)
+    {
         return;
     }
 
@@ -370,4 +370,4 @@ void RobotDriverBrov2::disconnect()
     impl_->node.reset();
 }
 
-}
+}  // namespace sas

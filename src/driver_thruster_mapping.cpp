@@ -23,7 +23,6 @@
 #
 # ################################################################*/
 
-
 #include "sas_robot_driver_brov2/driver_thruster_mapping.hpp"
 #include <algorithm>
 #include <cmath>
@@ -31,11 +30,10 @@
 
 namespace sas
 {
-    double force_to_pwm(double F, double min_pwm = 1100.0, double max_pwm = 1900.0)
-    {
-        const double pwm = 1500.0 + 8.0 * F;
+double force_to_pwm(double F, double min_pwm = 1100.0, double max_pwm = 1900.0)
+{
+    const double pwm = 1500.0 + 8.0 * F;
 
-        return std::clamp(pwm, min_pwm, max_pwm);
-    }
+    return std::clamp(pwm, min_pwm, max_pwm);
 }
-
+}  // namespace sas
