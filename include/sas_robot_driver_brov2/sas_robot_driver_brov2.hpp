@@ -99,9 +99,10 @@ public:
     /**
      * @brief Constructor.
      * @param configuration The driver configuration.
-     * @param break_loops Pointer to a flag that, when true, breaks the driver loops.
+     * @param shutdown_signaler Shared shutdown signaler, typically shared with the ROS wrapper.
      */
-    RobotDriverBrov2(const RobotDriverBrov2Configuration& configuration, std::atomic_bool* break_loops);
+    RobotDriverBrov2(const RobotDriverBrov2Configuration& configuration,
+                     const std::shared_ptr<marinholab::sas::core::ShutdownSignaler>& shutdown_signaler);
 
     /**
      * @brief Get the last commanded PWM vector (there is no sensor feedback).

@@ -53,8 +53,9 @@ public:
     Impl() {}
 };
 
-RobotDriverBrov2::RobotDriverBrov2(const RobotDriverBrov2Configuration& configuration, std::atomic_bool* break_loops)
-    : RobotDriver(std::make_shared<marinholab::sas::core::ShutdownSignaler>(break_loops)), configuration_(configuration)
+RobotDriverBrov2::RobotDriverBrov2(const RobotDriverBrov2Configuration& configuration,
+                                   const std::shared_ptr<marinholab::sas::core::ShutdownSignaler>& shutdown_signaler)
+    : RobotDriver(shutdown_signaler), configuration_(configuration)
 {
     // joint_limits_ = configuration.joint_limits; //for the superclass
     impl_ = std::make_unique<RobotDriverBrov2::Impl>();
@@ -199,11 +200,12 @@ void RobotDriverBrov2::connect()
 
     RCLCPP_INFO(impl_->node->get_logger(), "Waiting for %s...", configuration_.param_service_name.c_str());
 
-    while (!(*break_loops_) && !impl_->set_params_client->wait_for_service(std::chrono::milliseconds(50)))
+    while (!shutdown_signaler_->should_shutdown() &&
+           !impl_->set_params_client->wait_for_service(std::chrono::milliseconds(50)))
     {
     }
 
-    if (*break_loops_)
+    if (shutdown_signaler_->should_shutdown())
         throw std::runtime_error("Interrupted while waiting for MAVROS param service.");
 
     if (!impl_->set_params_client->service_is_ready())
@@ -232,7 +234,7 @@ void RobotDriverBrov2::initialize()
         throw std::runtime_error("Not connected.");
 
     // Call the service
-    while (!(*break_loops_))
+    while (!shutdown_signaler_->should_shutdown())
     {
         // 1 - Build the request
         auto request = std::make_shared<rcl_interfaces::srv::SetParameters::Request>();

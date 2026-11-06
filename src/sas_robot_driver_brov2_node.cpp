@@ -156,15 +156,14 @@ int main(int argc, char** argv)
         RCLCPP_INFO_STREAM_ONCE(node->get_logger(), "::Parameters OK.");
 
         RCLCPP_INFO_STREAM_ONCE(node->get_logger(), "::Instantiating UnderwaterRobotDriver.");
+        auto shutdown_signaler = std::make_shared<marinholab::sas::core::ShutdownSignaler>(&kill_this_process);
         auto robot_driver_myrobot = std::make_shared<sas::RobotDriverBrov2>(
-            configuration,
-            &kill_this_process);  // create an instance (object) of the driver class
+            configuration, shutdown_signaler);  // create an instance (object) of the driver class
 
         RCLCPP_INFO_STREAM_ONCE(node->get_logger(), "::Instantiating RobotDriverROS.");
         sas::RobotDriverROS robot_driver_ros(
             node, robot_driver_myrobot, robot_driver_ros_configuration,
-            std::make_shared<marinholab::sas::core::ShutdownSignaler>(
-                &kill_this_process));  // create an instance(object) of the SAS ROS wrapper class
+            shutdown_signaler);  // create an instance(object) of the SAS ROS wrapper class
         robot_driver_ros.control_loop();
     }
     catch (const std::exception& e)
