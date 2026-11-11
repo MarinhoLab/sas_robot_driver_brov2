@@ -148,7 +148,7 @@ void RobotDriverBrov2::set_target_joint_torques(const Eigen::VectorXd &tau) {  /
     // Process MAVROS callbacks, check for new ROS2 messages
     rclcpp::spin_some(impl_->node);
 
-    const bool state_fresh = impl_->state_received && (std::chrono::steady_clock::now() - impl_->last_state_time < std::chrono::seconds(1));
+    const bool state_fresh = impl_->state_received && (std::chrono::steady_clock::now() - impl_->last_state_time < std::chrono::seconds(2));
     const bool allow_thrust = impl_->mavros_connected && impl_->mavros_armed && state_fresh;
 
     // 1 - Input check: tau must be 6D
