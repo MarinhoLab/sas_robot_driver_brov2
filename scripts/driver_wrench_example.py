@@ -115,9 +115,9 @@ def main(args=None):
         rdi = RobotDriverClient(node, prefix, [MODE_BLACKLIST_FLAG.WATCHDOG_CONTROL])
 
         # Wait for RobotDriverClient to be enabled
-        while not rdi.is_enabled():
+        while not rdi.is_enabled(Functionality.ForceControl):
             rclcpp_spin_some(node)
-            time.sleep(0.1)
+            time.sleep(0.01)
 
         # Get topic information
         print(f"topic prefix = {rdi.get_topic_prefix()}")
@@ -153,7 +153,7 @@ def main(args=None):
         # Send zero wrench before shutdown
         if rdi is not None and node is not None:
             try:
-                if rdi.is_enabled():
+                if rdi.is_enabled(Functionality.ForceControl):
                     for _ in range(100):
                         rdi.send_target_joint_forces(tau_zero)
                         rclcpp_spin_some(node)
