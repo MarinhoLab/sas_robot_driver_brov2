@@ -14,6 +14,7 @@ find_package(sas_common REQUIRED)
 find_package(sas_robot_driver REQUIRED)
 find_package(mavros_msgs REQUIRED)
 find_package(realtime_tools REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
 ####################################
 # CPP Shared Library Block [BEGIN] #
@@ -122,6 +123,7 @@ install(PROGRAMS
 # According to https://github.com/SmartArmStack/sas_robot_driver/blob/ros2/CMakeLists.txt
 install(DIRECTORY
         launch
+        config
         DESTINATION share/${PROJECT_NAME}/
 )
 # ^^^^^^^^^^^^^^^^^^ #

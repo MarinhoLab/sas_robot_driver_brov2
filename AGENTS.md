@@ -23,7 +23,7 @@ curves, and publishes `mavros_msgs/OverrideRCIn` on the RC override topic
 - `launch/` - `brov2_launch.py` and `brov2_heavy_launch.py` (all parameters: TAM, PWM limits, thrust curves, MAVROS topics)
 - `scripts/driver_wrench_example.py` - example that sends wrenches through the SAS client
 - `docker/` - Dockerfile and compose file (host networking, same `ROS_DOMAIN_ID` as Blue)
-- `.agents/` - helper scripts for agents: `launch_blue.sh`, `record.py`, `make_gif.sh` (see "Re-creating the simulation video")
+- `.agents/` - helper scripts for agents: `launch_blue.sh`, `record.py`, `make_gif.sh` (see "Re-creating the simulation video"), `fake_fcu.py`, `mavros_wrench_test.py`, `test_mavros.sh` (see "Headless MAVROS integration test")
 - `media/` - README assets (`brov2_wrench_sim.gif`)
 
 ## Dependencies
@@ -46,6 +46,27 @@ There is no local `Doxyfile`. API documentation is built by
 [sas_devel](https://github.com/MarinhoLab/sas_devel), which includes this
 repository as a submodule. Keep Doxygen comments (`@file`, `@brief`) on public
 headers and use only Doxygen-compatible markdown in `README.md`.
+
+## Headless MAVROS integration test
+
+Without Blue/Gazebo: `.agents/test_mavros.sh` runs the driver against a real
+MAVROS and `.agents/fake_fcu.py`, a pymavlink MAVLink peer that answers the
+parameter fetch, echoes `PARAM_SET`, logs every `RC_CHANNELS_OVERRIDE` and
+streams `SERVO_OUTPUT_RAW`. The driver starts alongside MAVROS on purpose, so
+the test exercises the `param/set_parameters` retry against MAVROS' ~10 s
+post-connect parameter fetch. Run from the package root inside the SAS
+container (installs `ros-jazzy-mavros` + `pymavlink` if missing):
+
+```bash
+bash .agents/test_mavros.sh          # or: bash .agents/test_mavros.sh brov2_heavy_1
+```
+
+`.agents/mavros_wrench_test.py` steps the wrench zero → forward → zero and
+checks (exit code + PASS/FAIL lines): the SERVOx_FUNCTION `PARAM_SET`s reach
+the FCU, the override stream runs at the configured thread rate (no
+`RealtimePublisher` starvation), and the PWM change lands at the FCU within
+100 ms of the step. The pieces can also be driven individually; see the
+headers of each script.
 
 ## Re-creating the simulation video
 

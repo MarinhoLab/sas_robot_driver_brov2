@@ -26,8 +26,14 @@
 #include "sas_robot_driver_brov2/sas_robot_driver_brov2.hpp"
 #include "sas_robot_driver_brov2/driver_thruster_mapping.hpp"
 #include <iostream>
+#include <limits>
+#include <cmath>
 #include <memory>
+#include <chrono>
+#include <thread>
 #include <sas_core/eigen3_std_conversions.hpp>
+#include <mavros_msgs/msg/state.hpp>
+#include <sensor_msgs/msg/battery_state.hpp>
 
 namespace sas
 {
@@ -38,9 +44,15 @@ public:
     bool connected{false};
     bool motor_on{false};
     bool initialized{false};
+    bool mavros_connected{false};
+    bool mavros_armed{false};
+    bool state_received{false};
+
     Eigen::MatrixXd B_pinv;
     Eigen::VectorXd last_pwm_;
     Eigen::VectorXd last_tau_;
+
+	double battery_voltage{std::numeric_limits<double>::quiet_NaN()};
 
     std::shared_ptr<rclcpp::Node>
         node;  // defines node as a Impl member variable and it points to the ROS object -> rclcpp::Node
@@ -49,6 +61,8 @@ public:
     std::unique_ptr<realtime_tools::RealtimePublisher<mavros_msgs::msg::OverrideRCIn>>
         rt_override_rc_pub;  // only one owner
     rclcpp::Client<rcl_interfaces::srv::SetParameters>::SharedPtr set_params_client;
+    rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr mavros_state_sub;
+	rclcpp::Subscription<sensor_msgs::msg::BatteryState>::SharedPtr battery_sub;
 
     Impl() {}
 };
@@ -124,6 +138,12 @@ void RobotDriverBrov2::set_target_joint_torques(const Eigen::VectorXd& tau)
     if (!impl_->connected || !impl_->initialized)
         throw std::runtime_error("Not connected/initialized.");
 
+    // Process MAVROS callbacks, check for new ROS2 messages
+    rclcpp::spin_some(impl_->node);
+
+    const bool state_fresh = impl_->state_received && (std::chrono::steady_clock::now() - impl_->last_state_time < std::chrono::seconds(2));
+    const bool allow_thrust = impl_->mavros_connected && impl_->mavros_armed && state_fresh;
+
     // 1 - Input check: tau must be 6D
     if (tau.size() != 6)
     {
@@ -137,10 +157,21 @@ void RobotDriverBrov2::set_target_joint_torques(const Eigen::VectorXd& tau)
         throw std::runtime_error("RC override publisher not ready.");
     }
 
+	// Get battery voltage for PWM mapping
+    double V = configuration_.v_bus;
+
+    if (configuration_.use_battery_telemetry && configuration_.pwm_mapping == "bivariate")
+    {
+        // Fall back to the configured bus voltage until a valid telemetry sample arrives.
+        if (std::isfinite(impl_->battery_voltage))
+            V = impl_->battery_voltage;
+    }
+
     // 3 - Allocation
     const auto N = static_cast<Eigen::Index>(configuration_.thruster_configs.size());
     if (impl_->B_pinv.rows() != N || impl_->B_pinv.cols() != 6)
         throw std::runtime_error("Allocation matrix pseudoinverse not initialized or wrong size");
+
 
     Eigen::VectorXd f = impl_->B_pinv * tau;  // thruster force
 
@@ -154,8 +185,29 @@ void RobotDriverBrov2::set_target_joint_torques(const Eigen::VectorXd& tau)
             const auto& cfg =
                 configuration_.thruster_configs[i];  // makes cfg refer to the configuration data for thruster i
 
-            const double Fi = std::clamp(f(i), cfg.f_min, cfg.f_max);
-            double pwm = force_to_pwm(Fi, cfg.min_pwm, cfg.max_pwm);
+			const double Fi = std::clamp(f(i), cfg.f_min, cfg.f_max);
+
+            double pwm;
+
+            if (configuration_.pwm_mapping == "linear")
+            {
+                pwm = force_to_pwm_linear(Fi, cfg.min_pwm, cfg.max_pwm);
+            }
+            else if (configuration_.pwm_mapping == "bivariate")
+            {
+                pwm = force_to_pwm_bivariate(Fi, V,
+                    configuration_.fwd_thrust_curve_coeffs, configuration_.rev_thrust_curve_coeffs,
+                    cfg.neutral_pwm, cfg.deadband_pwm, cfg.min_pwm, cfg.max_pwm);
+            }
+            else
+            {
+                throw std::invalid_argument("Unsupported PWM mapping");
+            }
+
+            if (!allow_thrust)
+            {
+                pwm = cfg.neutral_pwm;
+            }
 
             impl_->rt_override_rc_pub->msg_.channels[cfg.channel - 1] =
                 static_cast<uint16_t>(std::lround(pwm));  // write value into correct RC channel slot
@@ -184,6 +236,22 @@ void RobotDriverBrov2::connect()
     // 1 - Create a node
     impl_->node = rclcpp::Node::make_shared("sas_thruster_node");
 
+    if (configuration_.use_battery_telemetry)
+    {
+        impl_->battery_sub = impl_->node->create_subscription<sensor_msgs::msg::BatteryState>(
+                "/mavros/battery",
+                rclcpp::SensorDataQoS(),
+                [this](sensor_msgs::msg::BatteryState::SharedPtr msg)
+                {
+                    if (msg->present &&
+                        std::isfinite(msg->voltage) &&
+                        msg->voltage > 0.0)
+                    {
+                        impl_->battery_voltage = msg->voltage;
+                    }
+                });
+    }
+
     // 2-  Create the RC override publisher + wrap it in a realtime safe publisher
     impl_->override_rc_pub = impl_->node->create_publisher<mavros_msgs::msg::OverrideRCIn>(
         configuration_.rc_override_topic, rclcpp::SystemDefaultsQoS());
@@ -210,6 +278,32 @@ void RobotDriverBrov2::connect()
 
     if (!impl_->set_params_client->service_is_ready())
         throw std::runtime_error("MAVROS param service not available.");
+
+    // Check MAVROS connection to ArduSub
+    impl_->mavros_state_sub = impl_->node->create_subscription<mavros_msgs::msg::State>(
+            "/mavros/state",
+            rclcpp::SensorDataQoS(),
+            [this](mavros_msgs::msg::State::SharedPtr msg) {
+                impl_->mavros_connected = msg->connected;
+                impl_->mavros_armed = msg->armed;
+                impl_->last_state_time = std::chrono::steady_clock::now();
+                impl_->state_received = true;
+            });
+
+    // Wait for MAVROS connection
+    const auto start = std::chrono::steady_clock::now();
+
+    while (rclcpp::ok() && !(*break_loops_) && !impl_->mavros_connected &&
+           std::chrono::steady_clock::now() - start < std::chrono::seconds(10))
+    {
+        rclcpp::spin_some(impl_->node);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+
+    if (!impl_->mavros_connected)
+        throw std::runtime_error("MAVROS is not connected to ArduSub.");
+
+    RCLCPP_INFO(impl_->node->get_logger(), "MAVROS connected to ArduSub.");
 
     impl_->connected = true;
     impl_->motor_on = false;
@@ -248,6 +342,7 @@ void RobotDriverBrov2::initialize()
             request->parameters.push_back(param);                   // Put that instruction into request
         }
 
+		if (configuration_.set_battery_voltage)
         {
             rcl_interfaces::msg::Parameter batt_param;
             batt_param.name = configuration_.sim_batt_voltage_param;
@@ -263,6 +358,32 @@ void RobotDriverBrov2::initialize()
         if (rclcpp::spin_until_future_complete(impl_->node, future, std::chrono::seconds(5)) ==
             rclcpp::FutureReturnCode::SUCCESS)
         {
+            auto response = future.get();
+            const size_t expected_results = configuration_.thruster_configs.size() +
+                (configuration_.set_battery_voltage ? 1u : 0u);
+            bool all_accepted = response->results.size() == expected_results;
+            for (const auto & result : response->results)
+            {
+                if (!result.successful)
+                {
+                    all_accepted = false;
+                    RCLCPP_WARN(impl_->node->get_logger(),
+                        "MAVROS rejected parameter set: %s",
+                        result.reason.c_str());
+                }
+            }
+
+            if (!all_accepted)
+            {
+                // MAVROS refuses parameters until it has fetched the FCU
+                // parameter list (~10 s after connecting). Retry until it
+                // actually applies them instead of assuming success.
+                RCLCPP_WARN(impl_->node->get_logger(),
+                    "Parameters not accepted yet, retrying...");
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                continue;
+            }
+
             RCLCPP_INFO(impl_->node->get_logger(), "All thrusters set to RC passthrough.");
 
             // 4 - Allocation setup
@@ -369,6 +490,8 @@ void RobotDriverBrov2::disconnect()
     impl_->connected = false;
     impl_->rt_override_rc_pub.reset();
     impl_->override_rc_pub.reset();
+    impl_->mavros_state_sub.reset();
+    impl_->mavros_connected = false;
     impl_->node.reset();
 }
 

@@ -29,12 +29,16 @@
  *        through sas::RobotDriverROS.
  */
 
+#include <cmath>
+#include <algorithm>
 #include <rclcpp/rclcpp.hpp>
 #include <sas_common/sas_common.hpp>
 #include <sas_core/eigen3_std_conversions.hpp>
 #include <sas_robot_driver/sas_robot_driver_ros.hpp>
 #include <sas_robot_driver_brov2/sas_robot_driver_brov2.hpp>
 #include <dqrobotics/utils/DQ_Math.h>
+#include <sas_msgs/msg/watchdog_trigger.hpp>
+#include <std_msgs/msg/float64_multi_array.hpp>
 
 /*********************************************
  * SIGNAL HANDLER
@@ -56,6 +60,28 @@ int main(int argc, char** argv)
     rclcpp::init(argc, argv, rclcpp::InitOptions(), rclcpp::SignalHandlerOptions::None);
 
     auto node = std::make_shared<rclcpp::Node>("sas_robot_driver_brov2");
+
+    const std::string prefix = node->get_name();
+
+    // Creates the publisher that sends heartbeat messages to SAS
+    auto watchdog_pub = node->create_publisher<sas_msgs::msg::WatchdogTrigger>(prefix + "/set/watchdog_trigger", 1);
+
+    // Listens for new wrench messages from controller
+    auto wrench_watchdog_sub = node->create_subscription<std_msgs::msg::Float64MultiArray>(
+            prefix + "/set/target_joint_forces", 1,
+            [watchdog_pub](const std_msgs::msg::Float64MultiArray::SharedPtr msg)
+            {
+                if (msg->data.size() != 6 || !std::all_of(msg->data.begin(), msg->data.end(), [](double x) { return std::isfinite(x); }))
+                    return;
+
+                sas_msgs::msg::WatchdogTrigger trigger;
+                trigger.header.stamp = rclcpp::Clock(RCL_SYSTEM_TIME).now();
+                trigger.status = true;
+                trigger.period_in_seconds = 0.2;
+                trigger.maximum_acceptable_delay_in_seconds = 0.1;
+
+                watchdog_pub->publish(trigger);
+            });
 
     try
     {
@@ -79,9 +105,12 @@ int main(int argc, char** argv)
         std::vector<double> x, y, z, rx, ry, rz;
         std::vector<std::string> servo_function_params;
 
-        // Reads ros2 parameters into c++ variables
-        sas::get_ros_parameter(node, "rc_override_topic", configuration.rc_override_topic);
-        sas::get_ros_parameter(node, "param_service_name", configuration.param_service_name);
+    	// Reads ros2 parameters into c++ variables
+		sas::get_ros_parameter(node, "pwm_mapping", configuration.pwm_mapping);
+		sas::get_ros_parameter(node, "rc_override_topic", configuration.rc_override_topic);
+		sas::get_ros_parameter(node, "param_service_name", configuration.param_service_name);
+		sas::get_ros_parameter(node, "set_battery_voltage", configuration.set_battery_voltage);
+		sas::get_ros_parameter(node, "use_battery_telemetry", configuration.use_battery_telemetry);
 
         sas::get_ros_parameter(node, "batt_voltage", batt_voltage);
         sas::get_ros_parameter(node, "thruster_channels", thruster_channels);
@@ -119,12 +148,19 @@ int main(int argc, char** argv)
             throw std::runtime_error("TAM column count must equal number of thrusters.");
         }
 
-        // Read curve coefficients
-        configuration.v_bus = batt_voltage;
-        configuration.fwd_thrust_curve_coeffs = fwd_thrust_curve_coeffs;
-        configuration.rev_thrust_curve_coeffs = rev_thrust_curve_coeffs;
-        if (configuration.fwd_thrust_curve_coeffs.size() != 5 || configuration.rev_thrust_curve_coeffs.size() != 5)
-            throw std::runtime_error("thrust_curve_coefficients must have length 5.");
+        // Validate PWM mapping method
+        if (configuration.pwm_mapping != "linear" &&
+            configuration.pwm_mapping != "bivariate")
+        {
+            throw std::invalid_argument("Unsupported PWM mapping method.");
+        }
+
+		// Read curve coefficients
+    	configuration.v_bus = batt_voltage;
+    	configuration.fwd_thrust_curve_coeffs = fwd_thrust_curve_coeffs;
+    	configuration.rev_thrust_curve_coeffs = rev_thrust_curve_coeffs;
+    	if (configuration.fwd_thrust_curve_coeffs.size() != 5 || configuration.rev_thrust_curve_coeffs.size() != 5)
+			throw std::runtime_error("thrust_curve_coefficients must have length 5.");
 
         // Prepare thruster_configs to be populated
         configuration.thruster_configs.clear();

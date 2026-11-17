@@ -66,6 +66,7 @@ struct RobotDriverBrov2Configuration
     std::vector<double> fwd_thrust_curve_coeffs;   ///< Forward thrust curve coefficients
     std::vector<double> rev_thrust_curve_coeffs;   ///< Reverse thrust curve coefficients
 
+    std::string pwm_mapping;                                         ///< Thrust-to-PWM mapping method (linear or bivariate)
     std::string rc_override_topic{"mavros/rc/override"};             ///< Topic the RC override is published to
     std::string node_name_prefix{"sas_thruster_node"};               ///< Prefix of the internal node name
     std::string param_service_name{"/mavros/param/set_parameters"};  ///< MAVROS parameter service
@@ -73,6 +74,9 @@ struct RobotDriverBrov2Configuration
 
     double v_bus;  ///< Bus (battery) voltage
 
+	bool set_battery_voltage{false};
+	bool use_battery_telemetry{false};
+                                           ///< Thruster allocation matrix (6 x number of thrusters)
     Eigen::MatrixXd B;  ///< Thruster allocation matrix (6 x number of thrusters)
 };
 

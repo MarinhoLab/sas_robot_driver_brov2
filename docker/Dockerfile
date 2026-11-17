@@ -5,7 +5,6 @@ SHELL ["/bin/bash", "-c"]
 RUN apt-get update && apt-get install -y \
     ros-jazzy-mavros-msgs \
     ros-jazzy-realtime-tools \
-    ros-jazzy-rmw-cyclonedds-cpp \
  && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && sudo apt-get upgrade -y
