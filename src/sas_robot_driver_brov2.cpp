@@ -56,6 +56,7 @@ public:
 
     std::shared_ptr<rclcpp::Node>
         node;  // defines node as a Impl member variable and it points to the ROS object -> rclcpp::Node
+	std::chrono::steady_clock::time_point last_state_time{};
     std::shared_ptr<rclcpp::Publisher<mavros_msgs::msg::OverrideRCIn>>
         override_rc_pub;  //multiple things can own/point to the object
     std::unique_ptr<realtime_tools::RealtimePublisher<mavros_msgs::msg::OverrideRCIn>>

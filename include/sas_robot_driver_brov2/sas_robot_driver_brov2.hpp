@@ -76,7 +76,7 @@ struct RobotDriverBrov2Configuration
 
 	bool set_battery_voltage{false};
 	bool use_battery_telemetry{false};
-                                           ///< Thruster allocation matrix (6 x number of thrusters)
+
     Eigen::MatrixXd B;  ///< Thruster allocation matrix (6 x number of thrusters)
 };
 

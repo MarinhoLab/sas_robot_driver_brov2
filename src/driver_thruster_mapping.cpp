@@ -30,9 +30,6 @@
 
 namespace sas
 {
-double force_to_pwm(double F, double min_pwm = 1100.0, double max_pwm = 1900.0)
-{
-    const double pwm = 1500.0 + 8.0 * F;
     double linear_poly(double F)
     {
        return 1500.0 + 8.0 * F;
@@ -77,6 +74,6 @@ double force_to_pwm(double F, double min_pwm = 1100.0, double max_pwm = 1900.0)
         if (std::abs(pwm - neutral_pwm) <= deadband_pwm)
             pwm = neutral_pwm;
 
-    return std::clamp(pwm, min_pwm, max_pwm);
-}
+        return std::clamp(pwm, min_pwm, max_pwm);
+    }
 }  // namespace sas
