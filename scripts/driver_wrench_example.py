@@ -33,7 +33,7 @@ from dqrobotics import *  # Despite what PyCharm might say, this is very much ne
 
 from sas_common import rclcpp_init, rclcpp_Node, rclcpp_shutdown, rclcpp_spin_some
 from sas_core import Clock, Statistics
-from sas_robot_driver import RobotDriverClient, MODE_BLACKLIST_FLAG
+from sas_robot_driver import RobotDriverClient, MODE_BLACKLIST_FLAG, Functionality
 
 # 1. Test configuration
 dt = 0.01
