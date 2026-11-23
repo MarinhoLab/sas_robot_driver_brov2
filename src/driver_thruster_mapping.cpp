@@ -37,7 +37,31 @@ namespace sas
 
     double bivariate_poly(double F, double V, const std::vector<double>& c)
     {
-        return c[0] + c[1]*F + c[2]*V + c[3]*F*F + c[4]*F*V;
+        // T200 data from 12V - 18V
+        if (c.size() != 14)
+            throw std::invalid_argument("poly43 requires 14 coefficients");
+
+        const double F2 = F * F;
+        const double F3 = F2 * F;
+        const double F4 = F3 * F;
+
+        const double V2 = V * V;
+        const double V3 = V2 * V;
+
+        return c[0]
+             + c[1]  * F
+             + c[2]  * V
+             + c[3]  * F2
+             + c[4]  * F * V
+             + c[5]  * V2
+             + c[6]  * F3
+             + c[7]  * F2 * V
+             + c[8]  * F * V2
+             + c[9]  * V3
+             + c[10] * F4
+             + c[11] * F3 * V
+             + c[12] * F2 * V2
+             + c[13] * F * V3;
     }
 
     double force_to_pwm_linear(double F, double min_pwm, double max_pwm)
